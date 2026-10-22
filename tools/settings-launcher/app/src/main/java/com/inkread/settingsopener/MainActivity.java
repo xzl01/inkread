@@ -1,6 +1,9 @@
 package com.inkread.settingsopener;
 
 import android.app.Activity;
+import android.app.ActivityManager;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -9,6 +12,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.StatFs;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.Gravity;
@@ -88,6 +92,7 @@ public class MainActivity extends Activity {
         addButton("扫描 Settings 相关页面", this::scanSettingsActivities);
 
         addSection("④ ADB 状态");
+        addButton("复制设备信息到剪贴板（发给协助者）", this::copyDeviceInfo);
         addButton("刷新状态", this::refreshStatus);
         addButton("实验：尝试直接打开 adb_enabled（通常需要系统权限）", this::tryForceEnableAdb);
 
@@ -163,6 +168,23 @@ public class MainActivity extends Activity {
         sb.append("型号：").append(Build.MODEL).append('\n');
         sb.append("Android：").append(Build.VERSION.RELEASE)
                 .append("（API ").append(Build.VERSION.SDK_INT).append("）\n");
+        sb.append("内核：").append(System.getProperty("os.version", "?")).append('\n');
+        sb.append("指纹：").append(Build.FINGERPRINT).append('\n');
+        sb.append("安全补丁：").append(Build.VERSION.SECURITY_PATCH).append('\n');
+        sb.append("ABI：").append(String.join(",", Build.SUPPORTED_ABIS)).append('\n');
+        if (Build.VERSION.SDK_INT >= 31) {
+            sb.append("SoC：").append(Build.SOC_MANUFACTURER).append(" ").append(Build.SOC_MODEL).append('\n');
+        } else {
+            sb.append("Board：").append(Build.BOARD).append(" / ").append(Build.HARDWARE).append('\n');
+        }
+        try {
+            ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+            ((ActivityManager) getSystemService(ACTIVITY_SERVICE)).getMemoryInfo(mi);
+            sb.append("内存：约 ").append(Math.round(mi.totalMem / 1024.0 / 1024 / 1024)).append(" GB\n");
+            StatFs sf = new StatFs(getFilesDir().getAbsolutePath());
+            sb.append("可用存储：约 ").append(sf.getAvailableBytes() / 1024 / 1024 / 1024).append(" GB\n");
+        } catch (Throwable ignored) {
+        }
         sb.append("开发者选项开关：").append(intGlobal(Settings.Global.DEVELOPMENT_SETTINGS_ENABLED) != 0 ? "已开启" : "未开启/未知").append('\n');
         sb.append("ADB 调试开关：").append(intGlobal(Settings.Global.ADB_ENABLED) != 0 ? "已开启" : "未开启/未知").append('\n');
         sb.append("无线调试开关：").append(intGlobal("adb_wifi_enabled") != 0 ? "已开启" : "未开启/未知").append('\n');
@@ -339,6 +361,17 @@ public class MainActivity extends Activity {
         if (name.startsWith(".")) name = name.substring(1);
         name = name.replace("com.android.settings", "").replace("settings$", "");
         return name.isEmpty() ? cls : name;
+    }
+
+    private void copyDeviceInfo() {
+        String text = statusView.getText().toString();
+        try {
+            ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            cm.setPrimaryClip(ClipData.newPlainText("device-info", text));
+            log("  ✓ 已复制设备信息到剪贴板");
+        } catch (Throwable t) {
+            log("  ✗ 复制失败：" + t);
+        }
     }
 
     // ---------------------------------------------------------------- adb
