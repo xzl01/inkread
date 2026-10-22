@@ -66,6 +66,8 @@ public class MainActivity extends Activity {
         addButton("打开系统设置（Settings）", () -> launchIntent(new Intent(Settings.ACTION_SETTINGS)));
         addButton("打开开发者选项（Developer options）",
                 () -> launchIntent(new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)));
+        addButton("打开「无线调试」页面（Android 11+，配对码无线 adb 用）",
+                this::tryWirelessDebuggingActivity);
         addButton("打开「关于设备 / 关于平板」（连点版本号入口）",
                 () -> launchIntent(new Intent(Settings.ACTION_DEVICE_INFO_SETTINGS)));
         addButton("打开应用列表（Apps）", () -> launchIntent(new Intent(Settings.ACTION_APPLICATION_SETTINGS)));
@@ -163,6 +165,7 @@ public class MainActivity extends Activity {
                 .append("（API ").append(Build.VERSION.SDK_INT).append("）\n");
         sb.append("开发者选项开关：").append(intGlobal(Settings.Global.DEVELOPMENT_SETTINGS_ENABLED) != 0 ? "已开启" : "未开启/未知").append('\n');
         sb.append("ADB 调试开关：").append(intGlobal(Settings.Global.ADB_ENABLED) != 0 ? "已开启" : "未开启/未知").append('\n');
+        sb.append("无线调试开关：").append(intGlobal("adb_wifi_enabled") != 0 ? "已开启" : "未开启/未知").append('\n');
         List<String> pkgs = settingsPackages();
         sb.append("找到的设置类应用：").append(pkgs.isEmpty() ? "无" : TextUtils.join("、", pkgs));
         statusView.setText(sb.toString());
@@ -227,6 +230,33 @@ public class MainActivity extends Activity {
             }
         }
         log("  ! 以上类名都不存在，请用下面的「扫描 Settings 相关页面」逐个尝试。");
+    }
+
+    private void tryWirelessDebuggingActivity() {
+        String[][] candidates = {
+                {"com.android.settings", "com.android.settings.wifi.debugging.WirelessDebuggingActivity"},
+                {"com.android.settings", "com.android.settings.development.WirelessDebuggingActivity"},
+                {"com.android.settings", "com.android.settings.wifi.debugging.WirelessDebuggingFragment"},
+                {"com.android.settings", "com.android.settings.Settings$WirelessDebuggingActivity"},
+        };
+        PackageManager pm = getPackageManager();
+        for (String[] c : candidates) {
+            try {
+                Intent i = new Intent();
+                i.setComponent(new ComponentName(c[0], c[1]));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                if (pm.resolveActivity(i, 0) == null) {
+                    log("  · 不存在：" + c[1]);
+                    continue;
+                }
+                startActivity(i);
+                log("  ✓ 已打开：" + c[1]);
+                return;
+            } catch (Throwable t) {
+                log("  ✗ " + c[1] + "：" + t.getClass().getSimpleName());
+            }
+        }
+        log("  ! 没找到无线调试页面。请先「打开开发者选项」，再在列表里找「无线调试」。");
     }
 
     // ---------------------------------------------------------------- scanning
