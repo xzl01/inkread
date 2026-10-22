@@ -22,9 +22,24 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # GitHub runner 自带 Android SDK；这里只补齐本项目需要的 components。
+      # 注意：不要用 android-actions/setup-android@v3 —— 它会安装已从 SDK 仓库移除的
+      # legacy "tools" 包，导致 "Failed to find package 'tools'" 失败。
+      - name: Prepare Android SDK components
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          if [ -z "$SDK_ROOT" ] || [ ! -d "$SDK_ROOT" ]; then
+            echo "未找到预装 Android SDK（ANDROID_SDK_ROOT/ANDROID_HOME 为空）" >&2
+            exit 1
+          fi
+          echo "SDK_ROOT=$SDK_ROOT"
+          SDKMANAGER="$(find "$SDK_ROOT" -type f -name sdkmanager -path '*/cmdline-tools/*' | sort | tail -n 1)"
+          echo "SDKMANAGER=$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
 
       - name: Data layer unit tests
         run: ./gradlew --no-daemon :core-data:testDebugUnitTest
