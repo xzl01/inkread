@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.InkRead" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/ink_background</item>
+        <item name="android:colorBackground">@color/ink_background</item>
+        <item name="android:statusBarColor">@color/ink_background</item>
+        <item name="android:navigationBarColor">@color/ink_background</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <!-- 墨水屏：禁用一切窗口动画，避免闪烁与残影 -->
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowContentTransitions">false</item>
+        <item name="android:windowActivityTransitions">false</item>
+        <item name="android:windowDisablePreview">true</item>
+    </style>
+
+    <style name="Theme.InkRead.Dialog" parent="android:Theme.Material.Light.Dialog.Alert">
+        <item name="android:windowBackground">@color/ink_background</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
+</resources>

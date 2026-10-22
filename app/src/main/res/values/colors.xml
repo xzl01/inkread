@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ink_background">#FFFFFFFF</color>
+    <color name="ink_text">#FF111111</color>
+    <color name="ink_icon_bg">#FFF2F2F2</color>
+</resources>
