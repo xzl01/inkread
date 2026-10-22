@@ -87,6 +87,10 @@ adb install -r dist/inkread-v0.1.0-release.apk
 或把 APK 拷贝到设备上点击安装（需允许「安装未知来源应用」）。
 部分国产墨水屏系统（大我/掌阅/汉王等）需要在设置里允许「安装第三方应用」。
 
+> 设备**没有原生「设置」入口**、找不到「开发者选项 / USB 调试」？
+> 见 [docs/DEVICE_SETTINGS.md](docs/DEVICE_SETTINGS.md)：内含各品牌路径、浏览器 intent 技巧，
+> 以及 16 KB 的配套小工具 [`tools/settings-launcher`](tools/settings-launcher/)（一键调出隐藏的系统设置页）。
+
 ## 使用
 
 1. **添加订阅**：首页空状态点「添加订阅源」→ 输入网站首页（如 `https://sspai.com`）或 feed 地址（如 `https://www.ruanyifeng.com/blog/atom.xml`）→「查找订阅源」→ 在候选列表点「订阅」。
@@ -132,8 +136,10 @@ elink-app/
 ├── feature-reader/       # :feature-reader —— 首页文章列表 + 阅读页 + 分页引擎
 ├── feature-library/      # :feature-library —— 订阅管理 + 添加订阅 + 设置
 ├── docs/ARCHITECTURE.md  # 开发规范与模块契约（重构/二次开发先读它）
+├── docs/DEVICE_SETTINGS.md # 无原生设置入口设备：打开开发者选项/USB 调试指南
+├── tools/settings-launcher/ # 配套小工具「打开设置」（16KB，无权限）
 ├── scripts/              # 构建脚本（dev-gradle.sh / build-apk.sh）
-└── dist/                 # 构建产物（APK）
+└── dist/                 # 构建产物（APK，不进 git）
 ```
 
 ## 测试
@@ -162,6 +168,7 @@ bash scripts/dev-gradle.sh :app:testDebugUnitTest
 - 后台同步受国产 ROM 省电策略影响：建议在系统设置里给「墨读」开启「自启动 / 允许后台运行」，并把电池优化设为「不限制」。
 - 部分海外源/被墙站点在国内网络下无法直连，需要用户网络环境支持。
 - 未对特定机型做像素级适配（开发者环境无真机），界面按通用 Android + 墨水屏特性设计。
+- 部分厂商 ROM 隐藏了系统设置入口：用 [docs/DEVICE_SETTINGS.md](docs/DEVICE_SETTINGS.md) 中的方法打开开发者选项/USB 调试。
 
 ## Roadmap
 
