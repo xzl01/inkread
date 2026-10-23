@@ -10,7 +10,26 @@
 - 显示当前 开发者选项 / ADB 调试 的开关状态
 - 实验性地尝试直接写 `adb_enabled`（普通应用无 `WRITE_SECURE_SETTINGS`，通常会失败，仅用于确认权限）
 
-> 不联网、不申请任何权限、不收集数据。
+> 不联网、不申请任何权限（仅声明 `RECEIVE_BOOT_COMPLETED`）、不收集数据。
+
+## 开机自动解锁厂商 ADB（讯飞 XF-R3 等）
+
+部分厂商设备（如讯飞起点阅读器 XF-R3）的 adbd 被定制限制：`adb shell` / `adb root` / `adb install`
+全部报 `not support command`，只有运行期属性 `service.iflytek.usb.allowed=true` 时才放开。
+
+本工具的 `BootUnlockReceiver` 会在开机收到 `BOOT_COMPLETED` 时自动执行：
+
+```sh
+setprop service.iflytek.usb.allowed true
+setprop sys.rkadb.root 1
+setprop service.adb.root 1
+```
+
+设备 SELinux 为 Permissive，因此普通应用即可设置这些属性；**不修改系统分区**，卸载即恢复原状。
+
+使用：安装后**手动打开一次**本应用（解除 Android 的 stopped 状态），之后每次开机 adb 自动为 root 可用。
+
+原理与更多细节见 [`docs/ADB_UNLOCK.md`](../../docs/ADB_UNLOCK.md)。
 
 ## 构建
 
