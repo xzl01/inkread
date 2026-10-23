@@ -23,15 +23,12 @@ XF-R3 的「锁屏壁纸」实际是 e-ink 待机图，由 system_server 里的 
   2. `android.iflyink.IFinkManager.setWallpaper(...)` 刷新系统显示
 - `which`：`0`=待机、`4`=充电、`5`=低电量
 
-## 一次性准备
+## 关键前提（本机已做）
 
-需要让普通 App 可写待机图目录（本机已做过）：
+App 走的是 `ifink` 服务的实时通道（由系统进程写入待机图），**普通 App 权限即可，不需要 root、也不需要 chmod 目录**。
+（`/data/local/iflytek/wallpaper` 的权限在重启后会被系统重置回 770，App 会跳过直接写文件，仅用 `IFinkManager` 通道。）
 
-```bash
-adb shell chmod 777 /data/local/iflytek/wallpaper
-```
-
-并禁用厂商会覆盖待机图的生成器 / 起点 App：
+需要禁用厂商会覆盖待机图的生成器 / 起点 App：
 
 ```bash
 adb shell pm disable-user com.qidian.eink
@@ -40,6 +37,7 @@ adb shell pm disable com.iflytek.ainote.settings/.receiver.WallpaperReceiver
 ```
 
 > 不执行这些也能用，但厂商每天/每次休眠可能把图换回「讯飞有声书 / 起点日历广告」。
+> 本机已禁用；如需恢复起点读书：`adb shell pm enable com.qidian.eink`。
 
 ## 构建与安装
 
@@ -65,4 +63,5 @@ adb push .tooling/standby/orig/. /data/local/iflytek/wallpaper/
 
 - 依赖 userdebug 构建的隐藏 API；正式 user 版本固件上反射可能被拦截。
 - 目录权限、SELinux 为 Permissive 是本机能工作的前提；换机/刷机后需重新做一次性准备。
-- 亮屏后更新约需 1~7 秒（厂商 `EinkUtil` 内部有写入等待），建议唤醒后稍等再休眠。
+- 亮屏后约 1~2 秒完成（实测：`3/3 写入成功（1.1s）`），建议唤醒后稍等再休眠。
+- 已验证重启后 App 会通过 `BOOT_COMPLETED` 自动启动并更新；只要安装后手动打开过一次。

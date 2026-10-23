@@ -104,14 +104,6 @@ public class MainActivity extends Activity {
     }
 
     private void applyNow() {
-        if (!WallpaperApplier.canWriteDir()) {
-            new AlertDialog.Builder(this)
-                    .setTitle("目录不可写")
-                    .setMessage("需要先执行一次（电脑端 adb）：\n\nadb shell chmod 777 /data/local/iflytek/wallpaper")
-                    .setPositiveButton("知道了", null)
-                    .show();
-            return;
-        }
         status.setText("正在更新…");
         WallpaperApplier.applyAsync(this, (ok, msg) -> runOnUiThread(() -> {
             status.setText((ok ? "✓ " : "✗ ") + msg);
