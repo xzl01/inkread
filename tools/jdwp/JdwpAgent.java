@@ -29,7 +29,7 @@ public class JdwpAgent {
             try {
                 attach(port);
                 try {
-                    if (mode.equals("patchbool") || mode.equals("getbool") || mode.equals("setprop2")) {
+                    if (mode.equals("patchbool") || mode.equals("patchstr") || mode.equals("getbool") || mode.equals("setprop2")) {
                         execute(mode, args);
                     } else {
                         if (!suspendedThread()) throw new IllegalStateException("no suspend event");
@@ -71,6 +71,8 @@ public class JdwpAgent {
             System.out.println(readBool(args[2], args[3]));
         } else if (mode.equals("patchbool")) {
             System.out.println(patchBool(args[2], args[3], Boolean.parseBoolean(args[4])));
+        } else if (mode.equals("patchstr")) {
+            System.out.println(patchStr(args[2], args[3], args[4]));
         } else if (mode.equals("dump")) {
             String kw = args.length > 2 ? args[2].toLowerCase() : "";
             dumpClasses(kw);
@@ -359,6 +361,25 @@ public class JdwpAgent {
                 v = inst.getValue(f);
             }
             return fieldName + "=" + v;
+        } finally {
+            vm.resume();
+        }
+    }
+
+    private static String patchStr(String cls, String fieldName, String value) throws Exception {
+        vm.suspend();
+        try {
+            ReferenceType rt = findClass(cls);
+            Field f = findField(rt, fieldName);
+            if (f == null) return "ERR field not found: " + fieldName;
+            if (f.isStatic()) {
+                ((ClassType) rt).setValue(f, vm.mirrorOf(value));
+                return "patched static " + cls + "." + fieldName + "=" + value;
+            }
+            ObjectReference inst = firstInstance((ClassType) rt);
+            if (inst == null) return "ERR no instance of " + cls;
+            inst.setValue(f, vm.mirrorOf(value));
+            return "patched " + cls + "." + fieldName + "=" + value;
         } finally {
             vm.resume();
         }
