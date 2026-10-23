@@ -90,6 +90,8 @@ adb install -r dist/inkread-v0.1.0-release.apk
 > 设备**没有原生「设置」入口**、找不到「开发者选项 / USB 调试」？
 > 见 [docs/DEVICE_SETTINGS.md](docs/DEVICE_SETTINGS.md)：内含各品牌路径、浏览器 intent 技巧，
 > 以及 16 KB 的配套小工具 [`tools/settings-launcher`](tools/settings-launcher/)（一键调出隐藏的系统设置页）。
+>
+> 另有独立小项目「墨屏待机」：<https://github.com/xzl01/inkstandby> —— 在 XF-R3 等墨水屏设备上设置/自动更新锁屏待机图。
 
 ## 使用
 
