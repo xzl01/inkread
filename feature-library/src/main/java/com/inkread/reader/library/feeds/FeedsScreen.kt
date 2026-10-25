@@ -62,6 +62,7 @@ import kotlinx.coroutines.delay
 fun FeedsScreen(
     onBack: () -> Unit,
     onAddFeed: () -> Unit,
+    onOpenCatalog: () -> Unit,
 ) {
     val ctx = LocalContext.current
     val container = (ctx.applicationContext as AppGraphProvider).container
@@ -155,6 +156,13 @@ fun FeedsScreen(
                 onClick = onAddFeed,
                 compact = true,
                 filled = false,
+                enabled = !opmlBusy,
+            )
+            InkButton(
+                text = "精选源",
+                onClick = onOpenCatalog,
+                compact = true,
+                filled = true,
                 enabled = !opmlBusy,
             )
             InkButton(

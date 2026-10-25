@@ -1,0 +1,193 @@
+[
+  {
+    "id": "sspai",
+    "name": "少数派",
+    "url": "https://sspai.com/feed",
+    "site": "https://sspai.com",
+    "category": "科技数码",
+    "description": "数字生活、效率工具与消费指南",
+    "language": "zh",
+    "recommended": true
+  },
+  {
+    "id": "ifanr",
+    "name": "爱范儿",
+    "url": "https://www.ifanr.com/feed",
+    "site": "https://www.ifanr.com",
+    "category": "科技数码",
+    "description": "消费科技、产品与生活方式报道",
+    "language": "zh"
+  },
+  {
+    "id": "geekpark",
+    "name": "极客公园",
+    "url": "https://www.geekpark.net/rss",
+    "site": "https://www.geekpark.net",
+    "category": "科技数码",
+    "description": "科技行业、产品与创业观察",
+    "language": "zh"
+  },
+  {
+    "id": "appinn",
+    "name": "小众软件",
+    "url": "https://www.appinn.com/feed/",
+    "site": "https://www.appinn.com",
+    "category": "科技数码",
+    "description": "实用软件、应用推荐与效率技巧",
+    "language": "zh"
+  },
+  {
+    "id": "solidot",
+    "name": "Solidot",
+    "url": "https://www.solidot.org/index.rss",
+    "site": "https://www.solidot.org",
+    "category": "科技数码",
+    "description": "奇客资讯与科技新闻摘要",
+    "language": "zh"
+  },
+  {
+    "id": "infoq",
+    "name": "InfoQ 中文",
+    "url": "https://www.infoq.cn/feed",
+    "site": "https://www.infoq.cn",
+    "category": "科技数码",
+    "description": "软件开发、架构与前沿技术资讯",
+    "language": "zh"
+  },
+  {
+    "id": "ruanyf",
+    "name": "阮一峰的网络日志",
+    "url": "https://www.ruanyifeng.com/blog/atom.xml",
+    "site": "https://www.ruanyifeng.com/blog/",
+    "category": "开发技术",
+    "description": "技术随笔、每周分享与工程思考",
+    "language": "zh",
+    "recommended": true
+  },
+  {
+    "id": "meituan-tech",
+    "name": "美团技术团队",
+    "url": "https://tech.meituan.com/feed/",
+    "site": "https://tech.meituan.com",
+    "category": "开发技术",
+    "description": "一线工程实践与技术深度文章",
+    "language": "zh"
+  },
+  {
+    "id": "hn",
+    "name": "Hacker News",
+    "url": "https://hnrss.org/frontpage",
+    "site": "https://news.ycombinator.com",
+    "category": "开发技术",
+    "description": "Hacker News 首页热门条目",
+    "language": "en"
+  },
+  {
+    "id": "woshipm",
+    "name": "人人都是产品经理",
+    "url": "https://www.woshipm.com/feed",
+    "site": "https://www.woshipm.com",
+    "category": "产品互联网",
+    "description": "产品设计、运营与行业观察",
+    "language": "zh"
+  },
+  {
+    "id": "gcores",
+    "name": "机核",
+    "url": "https://www.gcores.com/rss",
+    "site": "https://www.gcores.com",
+    "category": "游戏文化",
+    "description": "游戏、文化、电台与亚文化内容",
+    "language": "zh"
+  },
+  {
+    "id": "douban-book",
+    "name": "豆瓣书评",
+    "url": "https://www.douban.com/feed/review/book",
+    "site": "https://book.douban.com",
+    "category": "游戏文化",
+    "description": "豆瓣最新书评与阅读推荐",
+    "language": "zh"
+  },
+  {
+    "id": "theverge",
+    "name": "The Verge",
+    "url": "https://www.theverge.com/rss/index.xml",
+    "site": "https://www.theverge.com",
+    "category": "英文科技",
+    "description": "科技新闻、产品评测与深度报道",
+    "language": "en"
+  },
+  {
+    "id": "techcrunch",
+    "name": "TechCrunch",
+    "url": "https://techcrunch.com/feed/",
+    "site": "https://techcrunch.com",
+    "category": "英文科技",
+    "description": "创业、投资与科技公司新闻",
+    "language": "en"
+  },
+  {
+    "id": "arstechnica",
+    "name": "Ars Technica",
+    "url": "https://feeds.arstechnica.com/arstechnica/index",
+    "site": "https://arstechnica.com",
+    "category": "英文科技",
+    "description": "技术、科学与政策深度分析",
+    "language": "en"
+  },
+  {
+    "id": "cnbeta",
+    "name": "cnBeta",
+    "url": "https://www.cnbeta.com.tw/backend.php",
+    "site": "https://www.cnbeta.com.tw",
+    "category": "科技数码",
+    "description": "中文科技资讯与业界动态",
+    "language": "zh"
+  },
+  {
+    "id": "oschina",
+    "name": "开源中国",
+    "url": "https://www.oschina.net/news/rss",
+    "site": "https://www.oschina.net",
+    "category": "开发技术",
+    "description": "开源项目、软件与开发资讯",
+    "language": "zh"
+  },
+  {
+    "id": "juejin",
+    "name": "掘金",
+    "url": "https://juejin.cn/rss",
+    "site": "https://juejin.cn",
+    "category": "开发技术",
+    "description": "开发者技术文章与社区精选",
+    "language": "zh"
+  },
+  {
+    "id": "jiemian",
+    "name": "界面新闻",
+    "url": "https://a.jiemian.com/index.php?m=article&a=rss",
+    "site": "https://www.jiemian.com",
+    "category": "资讯",
+    "description": "商业、财经与时事新闻",
+    "language": "zh"
+  },
+  {
+    "id": "sina-news",
+    "name": "新浪新闻",
+    "url": "https://rss.sina.com.cn/news/china/focus15.xml",
+    "site": "https://news.sina.com.cn",
+    "category": "资讯",
+    "description": "国内新闻焦点",
+    "language": "zh"
+  },
+  {
+    "id": "chinanews",
+    "name": "中新网",
+    "url": "https://www.chinanews.com.cn/rss/scroll-news.xml",
+    "site": "https://www.chinanews.com.cn",
+    "category": "资讯",
+    "description": "中国新闻网滚动新闻",
+    "language": "zh"
+  }
+]

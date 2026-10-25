@@ -5,6 +5,7 @@ object Routes {
     const val Home = "home"
     const val Feeds = "feeds"
     const val AddFeed = "addFeed"
+    const val FeedCatalog = "feedCatalog"
     const val Settings = "settings"
 
     const val ArticleIdArg = "articleId"

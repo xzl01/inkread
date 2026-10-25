@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.inkread.reader.library.feeds.AddFeedScreen
+import com.inkread.reader.library.feeds.FeedCatalogScreen
 import com.inkread.reader.library.feeds.FeedsScreen
 import com.inkread.reader.library.settings.SettingsScreen
 import com.inkread.reader.reading.home.HomeScreen
@@ -54,7 +55,12 @@ fun InkNavHost(navController: NavHostController = rememberNavController()) {
             FeedsScreen(
                 onBack = { navController.popBackStack() },
                 onAddFeed = { navController.navigate(Routes.AddFeed) },
+                onOpenCatalog = { navController.navigate(Routes.FeedCatalog) },
             )
+        }
+
+        composable(Routes.FeedCatalog) {
+            FeedCatalogScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.AddFeed) {
