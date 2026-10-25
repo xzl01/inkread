@@ -95,9 +95,13 @@ fun ReaderScreen(
         !current.article.url.isNullOrBlank() &&
             (current.article.isPartial || current.article.contentText.length < 2_000)
     } == true
+    val imageUrls = article?.article?.imageUrls.orEmpty()
+    val hasInlineImages = imageUrls.isNotEmpty() && bodyText.isNotBlank()
     val forceScroll = bodyText.length > PaginationEngine.MAX_PAGED_CHARS
-    val useScroll = settings.readingMode == ReadingMode.SCROLL || pagedState.degraded || forceScroll
+    val useScroll = settings.readingMode == ReadingMode.SCROLL || pagedState.degraded ||
+        forceScroll || hasInlineImages
     val scrollNotice = when {
+        hasInlineImages -> "本文含 ${imageUrls.size} 张图片，已使用图文滚动模式"
         pagedState.degraded -> pagedState.degradedReason ?: "排版失败，已切换为滚动模式"
         forceScroll -> "文章过长，已切换为滚动模式"
         else -> null
@@ -256,6 +260,7 @@ fun ReaderScreen(
                         settings = settings,
                         notice = scrollNotice,
                         onPercentChange = { percent -> scrollPercent = percent },
+                        imageUrls = imageUrls,
                     )
                 }
                 else -> key(currentArticleId) {
