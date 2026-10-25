@@ -41,6 +41,7 @@ import com.inkread.reader.ui.components.InkNotice
 import com.inkread.reader.ui.components.InkTopBar
 import com.inkread.reader.ui.theme.InkColor
 import com.inkread.reader.ui.theme.InkDimen
+import com.inkread.reader.core.prefs.ImageEnhancement
 import com.inkread.reader.ui.theme.InkType
 
 /**
@@ -54,15 +55,16 @@ import com.inkread.reader.ui.theme.InkType
 internal fun ImageGalleryOverlay(
     urls: List<String>,
     referer: String?,
+    enhancement: ImageEnhancement = ImageEnhancement.OFF,
     onClose: () -> Unit,
 ) {
     if (urls.isEmpty()) return
     val context = LocalContext.current
     var index by remember(urls) { mutableIntStateOf(0) }
     var retry by remember(urls, index) { mutableIntStateOf(0) }
-    var bitmap by remember(urls, index) { mutableStateOf<Bitmap?>(null) }
-    var loading by remember(urls, index) { mutableStateOf(true) }
-    var error by remember(urls, index) { mutableStateOf<String?>(null) }
+    var bitmap by remember(urls, index, enhancement) { mutableStateOf<Bitmap?>(null) }
+    var loading by remember(urls, index, enhancement) { mutableStateOf(true) }
+    var error by remember(urls, index, enhancement) { mutableStateOf<String?>(null) }
     val focusRequester = remember { FocusRequester() }
     val metrics = context.resources.displayMetrics
 
@@ -74,7 +76,7 @@ internal fun ImageGalleryOverlay(
         if (index < urls.lastIndex) index += 1
     }
 
-    LaunchedEffect(urls, index, retry) {
+    LaunchedEffect(urls, index, retry, enhancement) {
         loading = true
         error = null
         bitmap = null
@@ -85,6 +87,7 @@ internal fun ImageGalleryOverlay(
             referer = referer,
             maxWidth = metrics.widthPixels,
             maxHeight = metrics.heightPixels,
+            enhancement = enhancement,
         )
         bitmap = loaded
         loading = false

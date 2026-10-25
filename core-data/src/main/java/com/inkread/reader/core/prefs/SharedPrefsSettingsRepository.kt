@@ -37,6 +37,7 @@ class SharedPrefsSettingsRepository(context: Context) : SettingsRepository {
             putString(KEY_CUSTOM_FONT_NAME, next.customFontName)
             putInt(KEY_PAGE_MARGIN, next.pageMarginDp)
             putString(KEY_READING_MODE, next.readingMode.name)
+            putString(KEY_IMAGE_ENHANCEMENT, next.imageEnhancement.name)
             putBoolean(KEY_SHOW_PROGRESS, next.showReadingProgress)
             putBoolean(KEY_KEEP_SCREEN_ON, next.keepScreenOn)
             putBoolean(KEY_AUTO_REFRESH, next.autoRefreshOnOpen)
@@ -56,6 +57,10 @@ class SharedPrefsSettingsRepository(context: Context) : SettingsRepository {
             customFontName = prefs.getString(KEY_CUSTOM_FONT_NAME, null),
             pageMarginDp = prefs.getInt(KEY_PAGE_MARGIN, defaults.pageMarginDp),
             readingMode = enumOrDefault(prefs.getString(KEY_READING_MODE, null), defaults.readingMode),
+            imageEnhancement = enumOrDefault(
+                prefs.getString(KEY_IMAGE_ENHANCEMENT, null),
+                defaults.imageEnhancement,
+            ),
             showReadingProgress = prefs.getBoolean(KEY_SHOW_PROGRESS, defaults.showReadingProgress),
             keepScreenOn = prefs.getBoolean(KEY_KEEP_SCREEN_ON, defaults.keepScreenOn),
             autoRefreshOnOpen = prefs.getBoolean(KEY_AUTO_REFRESH, defaults.autoRefreshOnOpen),
@@ -80,6 +85,7 @@ class SharedPrefsSettingsRepository(context: Context) : SettingsRepository {
         const val KEY_CUSTOM_FONT_NAME = "custom_font_name"
         const val KEY_PAGE_MARGIN = "page_margin_dp"
         const val KEY_READING_MODE = "reading_mode"
+        const val KEY_IMAGE_ENHANCEMENT = "image_enhancement"
         const val KEY_SHOW_PROGRESS = "show_reading_progress"
         const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
         const val KEY_AUTO_REFRESH = "auto_refresh_on_open"

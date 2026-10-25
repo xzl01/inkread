@@ -352,6 +352,7 @@ fun ReaderScreen(
         ImageGalleryOverlay(
             urls = article.article.imageUrls,
             referer = article.article.url ?: article.feedSiteUrl,
+            enhancement = settings.imageEnhancement,
             onClose = { showGallery = false },
         )
     }

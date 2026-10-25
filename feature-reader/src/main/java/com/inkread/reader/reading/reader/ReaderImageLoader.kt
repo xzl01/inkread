@@ -3,11 +3,16 @@ package com.inkread.reader.reading.reader
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Paint
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import com.inkread.reader.core.prefs.ImageEnhancement
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -28,6 +33,7 @@ internal object ReaderImageLoader {
         referer: String?,
         maxWidth: Int,
         maxHeight: Int,
+        enhancement: ImageEnhancement = ImageEnhancement.OFF,
     ): Bitmap? = withContext(Dispatchers.IO) {
         if (url.isBlank()) return@withContext null
         val dir = File(context.cacheDir, "article-images").apply { mkdirs() }
@@ -41,8 +47,36 @@ internal object ReaderImageLoader {
             }
         }
         val bitmap = decodeSampled(cacheFile, maxWidth, maxHeight)
-        if (bitmap == null) cacheFile.delete()
-        bitmap
+        if (bitmap == null) {
+            cacheFile.delete()
+            return@withContext null
+        }
+        applyEnhancement(bitmap, enhancement)
+    }
+
+    /** 彩色墨水屏增强：饱和度 + 对比度 + 轻微提亮；关闭时直接返回原图。 */
+    private fun applyEnhancement(source: Bitmap, enhancement: ImageEnhancement): Bitmap {
+        if (enhancement == ImageEnhancement.OFF) return source
+        val matrix = ColorMatrix().apply { setSaturation(enhancement.saturation) }
+        val c = enhancement.contrast
+        val translate = 128f * (1f - c) + enhancement.brightness
+        matrix.postConcat(
+            ColorMatrix(
+                floatArrayOf(
+                    c, 0f, 0f, 0f, translate,
+                    0f, c, 0f, 0f, translate,
+                    0f, 0f, c, 0f, translate,
+                    0f, 0f, 0f, 1f, 0f,
+                ),
+            ),
+        )
+        val output = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(output)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            colorFilter = ColorMatrixColorFilter(matrix)
+        }
+        canvas.drawBitmap(source, 0f, 0f, paint)
+        return output
     }
 
     private fun download(url: String, referer: String?, target: File) {

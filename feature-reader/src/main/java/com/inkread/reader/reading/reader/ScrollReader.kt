@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.inkread.reader.core.model.ArticleWithFeed
+import com.inkread.reader.core.prefs.ImageEnhancement
 import com.inkread.reader.core.prefs.ReaderSettings
 import com.inkread.reader.reading.ReaderFormat
 import com.inkread.reader.ui.components.InkDivider
@@ -135,6 +136,7 @@ internal fun ScrollReader(
                     is ReaderBlock.Image -> InlineArticleImage(
                         url = block.url,
                         referer = article.article.url ?: article.feedSiteUrl,
+                        enhancement = settings.imageEnhancement,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 8.dp),
@@ -184,12 +186,13 @@ private fun buildBlocks(bodyText: String, imageUrls: List<String>): List<ReaderB
 private fun InlineArticleImage(
     url: String,
     referer: String?,
+    enhancement: ImageEnhancement,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var bitmap by remember(url) { mutableStateOf<Bitmap?>(null) }
-    var failed by remember(url) { mutableStateOf(false) }
-    LaunchedEffect(url) {
+    var bitmap by remember(url, enhancement) { mutableStateOf<Bitmap?>(null) }
+    var failed by remember(url, enhancement) { mutableStateOf(false) }
+    LaunchedEffect(url, enhancement) {
         failed = false
         val metrics = context.resources.displayMetrics
         val loaded = ReaderImageLoader.load(
@@ -198,6 +201,7 @@ private fun InlineArticleImage(
             referer = referer,
             maxWidth = metrics.widthPixels,
             maxHeight = metrics.heightPixels,
+            enhancement = enhancement,
         )
         bitmap = loaded
         failed = loaded == null

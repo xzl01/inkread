@@ -8,6 +8,21 @@ enum class ReaderFont(val label: String, val serif: Boolean) {
     SANS("黑体", false),
 }
 
+/**
+ * 彩色墨水屏图片增强：提高饱和度/对比度，让图片在 Kaleido 类屏幕上不发灰。
+ * 只影响图片，不改文字排版。
+ */
+enum class ImageEnhancement(
+    val label: String,
+    val saturation: Float,
+    val contrast: Float,
+    val brightness: Float,
+) {
+    OFF("关闭", 1f, 1f, 0f),
+    LIGHT("轻", 1.22f, 1.06f, 4f),
+    STRONG("强", 1.4f, 1.12f, 8f),
+}
+
 /** 阅读器的翻页方式。墨水屏默认整页翻页（残影最少）。 */
 enum class ReadingMode(val label: String) {
     PAGED("翻页"),
@@ -25,6 +40,7 @@ data class ReaderSettings(
     val customFontName: String? = null,
     val pageMarginDp: Int = 20,
     val readingMode: ReadingMode = ReadingMode.PAGED,
+    val imageEnhancement: ImageEnhancement = ImageEnhancement.LIGHT,
     val showReadingProgress: Boolean = true,
     val keepScreenOn: Boolean = false,
 

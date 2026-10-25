@@ -35,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.inkread.reader.core.AppGraphProvider
 import com.inkread.reader.core.model.StorageStats
+import com.inkread.reader.core.prefs.ImageEnhancement
 import com.inkread.reader.core.prefs.ReaderFont
 import com.inkread.reader.core.prefs.ReaderSettings
 import com.inkread.reader.core.prefs.ReadingMode
@@ -281,6 +282,19 @@ private fun ReadingSection(
             }
         }
         RowDivider()
+
+        ChipSettingRow(
+            title = "图片增强",
+            subtitle = "针对彩色墨水屏提高图片饱和度/对比度；只影响图片",
+        ) {
+            ImageEnhancement.entries.forEach { enhancement ->
+                InkChip(
+                    text = enhancement.label,
+                    selected = settings.imageEnhancement == enhancement,
+                    onClick = { vm.update { it.copy(imageEnhancement = enhancement) } },
+                )
+            }
+        }
 
         ChipSettingRow(title = "翻页模式", subtitle = "整页翻页残影最少，滚动模式更接近网页") {
             ReadingMode.entries.forEach { mode ->
