@@ -33,6 +33,32 @@ class ArticleExtractorTest {
     }
 
     @Test
+    fun prefersContentClassOverArticleHeaderAndAuthorCards() {
+        val html = """
+            <html><body>
+              <article>
+                <header class="article__header">
+                  <h1>标题</h1>
+                  <div class="author">作者卡片 关注 分享 举报</div>
+                </header>
+                <div class="article__main__content" data-v-1>
+                  <div class="paragraph">大家好，这是真正的正文第一段，内容足够长以通过最小长度检查。</div>
+                  <div class="paragraph">第二段正文，带一张正文配图。<img src="https://img.example.com/photo.jpg"></div>
+                </div>
+                <footer class="article__footer">责任编辑 分享 收藏</footer>
+              </article>
+            </body></html>
+        """.trimIndent()
+        val result = ArticleExtractor.extract(html, "https://example.com/post")
+        assertNotNull(result)
+        val text = result!!.text
+        assertTrue(text.contains("真正的正文第一段"))
+        assertTrue(!text.contains("作者卡片"))
+        assertTrue(!text.contains("责任编辑"))
+        assertEquals(listOf("https://img.example.com/photo.jpg"), result.imageUrls)
+    }
+
+    @Test
     fun fallsBackToBodyWhenNoArticleOrMain() {
         val html = """
             <html><body>

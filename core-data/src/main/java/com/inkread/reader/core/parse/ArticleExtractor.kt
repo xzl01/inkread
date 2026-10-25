@@ -14,6 +14,10 @@ object ArticleExtractor {
     private const val MIN_TEXT_LENGTH = 40
 
     private val ARTICLE_RE = Regex("""(?is)<article\b[^>]*>(.*?)</article>""")
+    private val CONTENT_KEYWORDS = listOf(
+        "article__main__content", "article-body", "entry-content", "post-content",
+        "article-content", "rich_media_content", "content-body", "post-body", "main-content",
+    )
     private val MAIN_RE = Regex("""(?is)<main\b[^>]*>(.*?)</main>""")
     private val BODY_RE = Regex("""(?is)<body\b[^>]*>(.*?)</body>""")
 
@@ -32,6 +36,11 @@ object ArticleExtractor {
         val cleanedPage = COMMENT_RE.replace(NOISE_RE.replace(html, " "), " ")
 
         val candidates = ArrayList<String>()
+        // 优先常见正文容器的 class（SSPai 的 article__main__content / article-body 等），
+        // 避免把作者卡片、分享面板、页脚当成正文。
+        CONTENT_KEYWORDS.forEach { keyword ->
+            extractByClass(cleanedPage, keyword)?.let { candidates += it }
+        }
         candidates += ARTICLE_RE.findAll(cleanedPage)
             .map { it.groupValues[1] }
             .filter { it.isNotBlank() }
@@ -50,5 +59,40 @@ object ArticleExtractor {
             )
         }
         return null
+    }
+
+    /** 找到 class 含 [keyword] 的第一个 div/section/article，并返回其内部 HTML（支持嵌套同名标签）。 */
+    private fun extractByClass(html: String, keyword: String): String? {
+        val open = Regex(
+            """(?is)<(div|section|article)\b[^>]*class="[^"]*${Regex.escape(keyword)}[^"]*"[^>]*>""",
+        ).find(html) ?: return null
+        val tag = open.groupValues[1].lowercase()
+        val start = open.range.last + 1
+        val end = findMatchingClose(html, tag, start)
+        if (end <= start) return null
+        return html.substring(start, end)
+    }
+
+    /** 从 [from] 开始找到与已打开 [tag] 匹配的结束标签位置。 */
+    private fun findMatchingClose(html: String, tag: String, from: Int): Int {
+        var depth = 1
+        var i = from
+        while (i < html.length) {
+            val nextOpen = html.indexOf("<$tag", i, ignoreCase = true)
+            val nextClose = html.indexOf("</$tag", i, ignoreCase = true)
+            if (nextClose < 0) return html.length
+            if (nextOpen in 0 until nextClose) {
+                val afterName = nextOpen + 1 + tag.length
+                val boundary = afterName < html.length &&
+                    (html[afterName].isWhitespace() || html[afterName] == '>' || html[afterName] == '/')
+                if (boundary) depth++
+                i = nextOpen + 1
+            } else {
+                depth--
+                if (depth == 0) return nextClose
+                i = nextClose + 2 + tag.length
+            }
+        }
+        return html.length
     }
 }

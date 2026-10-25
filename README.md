@@ -5,7 +5,7 @@
 > 为**彩色电子墨水屏 Android 阅读器**打造的 RSS 订阅阅读器。
 > 零动画、高对比、整页翻页、离线可读 —— 把 RSS 阅读做成纸书体验。
 
-- 包名：`com.inkread.reader` ｜ 版本：`0.4.0` ｜ 最低系统：Android 8.0 (API 26)
+- 包名：`com.inkread.reader` ｜ 版本：`0.4.1` ｜ 最低系统：Android 8.0 (API 26)
 - 技术栈：Kotlin + Jetpack Compose（手写墨水屏组件）+ SQLite + OkHttp + WorkManager
 - 无 Google 服务依赖（国产墨水屏设备可直接安装）
 - 源码仓库：<https://github.com/xzl01/inkread>
@@ -67,11 +67,11 @@
 ```bash
 # 一键出 APK（默认 release，可直接安装）
 bash scripts/build-apk.sh
-# 产物：dist/inkread-v0.4.0-release.apk（附 sha256）
+# 产物：dist/inkread-v0.4.1-release.apk（附 sha256）
 
 # debug 包（含 Compose 调试工具，开发用）
 bash scripts/build-apk.sh debug
-# 产物：dist/inkread-v0.4.0-debug.apk
+# 产物：dist/inkread-v0.4.1-debug.apk
 
 # 也可以直接用 Gradle（本仓开发环境会用 .tooling 里的 JDK 21，否则用 ./gradlew）
 bash scripts/dev-gradle.sh :app:assembleRelease
@@ -94,7 +94,7 @@ bash scripts/dev-gradle.sh :app:assembleDebug
 
 ```bash
 # USB 连接阅读器，开启「开发者选项 → USB 调试」
-adb install -r dist/inkread-v0.4.0-release.apk
+adb install -r dist/inkread-v0.4.1-release.apk
 ```
 
 或把 APK 拷贝到设备上点击安装（需允许「安装未知来源应用」）。

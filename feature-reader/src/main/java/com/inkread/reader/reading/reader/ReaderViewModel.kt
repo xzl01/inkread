@@ -67,6 +67,7 @@ class ReaderViewModel(
     val hint: StateFlow<String?> = _hint.asStateFlow()
 
     private var loadJob: Job? = null
+    private val autoFetchTried = mutableSetOf<Long>()
     private var hintJob: Job? = null
 
     init {
@@ -95,6 +96,12 @@ class ReaderViewModel(
                     adjacent = adjacent,
                     loading = false,
                 )
+                // RSS 只有摘要的文章：进入阅读页后自动尝试补全一次，失败保留摘要并显示按钮。
+                if (item.article.isPartial && !item.article.url.isNullOrBlank() &&
+                    autoFetchTried.add(id)
+                ) {
+                    fetchFullText()
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {

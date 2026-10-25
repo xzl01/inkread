@@ -12,6 +12,9 @@ object HtmlImages {
     const val DEFAULT_LIMIT = 20
 
     private val IMG_TAG = Regex("""(?is)<img\b[^>]*>""")
+    private val CHROME_URL = Regex(
+        """(?:avatar|/logo|logo\.|icon|qrcode|qr-code|placeholder|emoji|badge|sprite)""",
+    )
     private val ATTR = Regex(
         """(?is)([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))""",
     )
@@ -42,6 +45,9 @@ object HtmlImages {
                 continue
             }
             if (resolved.substringBefore('?').endsWith(".svg", ignoreCase = true)) continue
+            // 头像 / logo / 二维码 / 占位图等页面装饰，不是正文配图
+            val lower = resolved.lowercase()
+            if (CHROME_URL.containsMatchIn(lower)) continue
             result.add(resolved)
         }
         return result.toList()
