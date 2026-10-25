@@ -45,6 +45,8 @@ internal fun ReaderActionBar(
     isStarred: Boolean,
     hasPrevious: Boolean,
     hasNext: Boolean,
+    imageCount: Int = 0,
+    onOpenImages: () -> Unit = {},
     onFontSizeDelta: (Float) -> Unit,
     onLineHeightDelta: (Float) -> Unit,
     onSelectFont: (ReaderFont) -> Unit,
@@ -145,6 +147,14 @@ internal fun ReaderActionBar(
                 compact = true,
                 filled = false,
             )
+            if (imageCount > 0) {
+                InkButton(
+                    text = "图片 $imageCount",
+                    onClick = onOpenImages,
+                    compact = true,
+                    filled = false,
+                )
+            }
             InkButton(
                 text = "标记未读",
                 onClick = onMarkUnread,

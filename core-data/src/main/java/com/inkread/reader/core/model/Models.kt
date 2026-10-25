@@ -50,6 +50,8 @@ data class Article(
     val previewText: String = "",
     val isRead: Boolean = false,
     val isStarred: Boolean = false,
+    /** 正文中的图片地址（同步时从 HTML 提取，阅读页「看图」使用）。 */
+    val imageUrls: List<String> = emptyList(),
 )
 
 /** 文章 + 所属订阅源信息（列表/阅读页展示用）。 */

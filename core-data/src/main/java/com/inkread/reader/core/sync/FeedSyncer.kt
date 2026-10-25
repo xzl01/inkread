@@ -9,6 +9,7 @@ import com.inkread.reader.core.net.FetchException
 import com.inkread.reader.core.net.FetchResponse
 import com.inkread.reader.core.net.HttpFetcher
 import com.inkread.reader.core.parse.FeedParser
+import com.inkread.reader.core.parse.HtmlImages
 import com.inkread.reader.core.parse.HtmlToText
 import com.inkread.reader.core.prefs.SettingsRepository
 import kotlinx.coroutines.CancellationException
@@ -89,6 +90,10 @@ internal class FeedSyncer(
 
         val articles = parsed.articles.map { parsedArticle ->
             val contentText = HtmlToText.toText(parsedArticle.contentHtml).take(MAX_CONTENT_CHARS)
+            val imageUrls = HtmlImages.extract(
+                html = parsedArticle.contentHtml,
+                baseUrl = parsedArticle.url ?: feed.siteUrl,
+            )
             Article(
                 feedId = feed.id,
                 guid = parsedArticle.guid,
@@ -99,9 +104,12 @@ internal class FeedSyncer(
                 fetchedAt = now,
                 contentText = contentText,
                 previewText = HtmlToText.previewFromText(contentText),
+                imageUrls = imageUrls,
             )
         }
         val inserted = articleDao.insertArticles(feed.id, articles)
+        // 旧版本升级后，已有文章没有图片列；重新同步时补齐。
+        articleDao.updateImageUrls(feed.id, articles)
         articleDao.enforceFeedLimit(feed.id, MAX_ARTICLES_PER_FEED)
         feedDao.updateFetchSuccess(feed.id, now, response.etag, response.lastModified)
         return FeedSyncOutcome(newArticles = inserted)

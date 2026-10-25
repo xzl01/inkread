@@ -39,12 +39,15 @@ class InkReadDatabase private constructor(context: Context) : SQLiteOpenHelper(
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // version 1 为首个版本，暂无迁移逻辑。后续版本在此按 oldVersion 逐步升级。
+        // version 1 为首个版本；v2 增加正文图片地址列。
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE articles ADD COLUMN image_urls TEXT NOT NULL DEFAULT ''")
+        }
     }
 
     companion object {
         const val DB_NAME = "inkread.db"
-        const val DB_VERSION = 1
+        const val DB_VERSION = 2
 
         const val TABLE_FEEDS = "feeds"
         const val TABLE_ARTICLES = "articles"
@@ -80,6 +83,7 @@ class InkReadDatabase private constructor(context: Context) : SQLiteOpenHelper(
                 preview_text TEXT NOT NULL DEFAULT '',
                 is_read INTEGER NOT NULL DEFAULT 0,
                 is_starred INTEGER NOT NULL DEFAULT 0,
+                image_urls TEXT NOT NULL DEFAULT '',
                 UNIQUE(feed_id, guid)
             )
         """

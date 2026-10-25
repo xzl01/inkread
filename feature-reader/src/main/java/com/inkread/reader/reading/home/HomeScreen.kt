@@ -1,11 +1,13 @@
 package com.inkread.reader.reading.home
 
+import android.view.KeyEvent as NativeKeyEvent
+
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,17 +15,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -46,16 +53,21 @@ import com.inkread.reader.ui.components.InkGlyphButton
 import com.inkread.reader.ui.components.InkLoadingText
 import com.inkread.reader.ui.components.InkNotice
 import com.inkread.reader.ui.components.InkTab
+import com.inkread.reader.ui.components.InkTextButton
 import com.inkread.reader.ui.components.InkTopBar
 import com.inkread.reader.ui.components.inkClickable
 import com.inkread.reader.ui.theme.InkColor
 import com.inkread.reader.ui.theme.InkReadTheme
 import com.inkread.reader.ui.theme.InkType
 
+/** 首页每页文章数：4 篇在 XF-R3 的 1264×1680 屏上刚好一屏，翻页不会裁切。 */
+private const val HOME_PAGE_SIZE = 4
+
 /**
  * 首页：文章列表（未读 / 全部 / 收藏 / 订阅管理四个 Tab）。
  *
  * 墨水屏约束：整页静态内容，零动画、零涟漪；同步状态只用一行静态文字表达。
+ * 翻页：音量键 / PageUp、PageDown 整页切换，避免手指滑动的整屏刷新与残影。
  */
 @Composable
 fun HomeScreen(
@@ -127,7 +139,46 @@ private fun HomeContent(
 ) {
     val enabledFeeds = remember(feeds) { feeds.filter { it.feed.enabled } }
 
-    Column(modifier = Modifier.fillMaxSize().background(InkColor.paper)) {
+    val pageCount = maxOf(1, (articles.size + HOME_PAGE_SIZE - 1) / HOME_PAGE_SIZE)
+    var page by remember(tab, feedFilterId) { mutableIntStateOf(0) }
+    LaunchedEffect(articles.size, pageCount) {
+        if (page > pageCount - 1) page = pageCount - 1
+        if (page < 0) page = 0
+    }
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
+    LaunchedEffect(page) { runCatching { focusRequester.requestFocus() } }
+    val handlePageKey: (KeyEvent) -> Boolean = { event ->
+        val native = event.nativeKeyEvent
+        if (native.action != NativeKeyEvent.ACTION_DOWN || articles.isEmpty()) {
+            false
+        } else {
+            when (native.keyCode) {
+                NativeKeyEvent.KEYCODE_VOLUME_DOWN,
+                NativeKeyEvent.KEYCODE_PAGE_DOWN,
+                -> {
+                    if (native.repeatCount == 0) page = (page + 1).coerceAtMost(pageCount - 1)
+                    true
+                }
+                NativeKeyEvent.KEYCODE_VOLUME_UP,
+                NativeKeyEvent.KEYCODE_PAGE_UP,
+                -> {
+                    if (native.repeatCount == 0) page = (page - 1).coerceAtLeast(0)
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(InkColor.paper)
+            .focusRequester(focusRequester)
+            .focusable()
+            .onPreviewKeyEvent(handlePageKey),
+    ) {
         InkTopBar(
             title = tabTitle(tab, unreadCount),
             actions = {
@@ -190,11 +241,37 @@ private fun HomeContent(
                     onManageFeeds = onManageFeeds,
                 )
                 else -> key(tab, feedFilterId) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 8.dp),
-                    ) {
-                        items(items = articles, key = { it.article.id }) { item ->
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        val pageArticles = articles
+                            .drop(page * HOME_PAGE_SIZE)
+                            .take(HOME_PAGE_SIZE)
+                        if (pageCount > 1) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = "第 ${page + 1}/${pageCount} 页 · 音量键翻页",
+                                    style = InkType.meta,
+                                    color = InkColor.inkTertiary,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                InkTextButton(
+                                    text = "上一页",
+                                    enabled = page > 0,
+                                    onClick = { page = (page - 1).coerceAtLeast(0) },
+                                )
+                                InkTextButton(
+                                    text = "下一页",
+                                    enabled = page < pageCount - 1,
+                                    onClick = { page = (page + 1).coerceAtMost(pageCount - 1) },
+                                )
+                            }
+                            InkDivider(color = InkColor.ruleLight)
+                        }
+                        pageArticles.forEach { item ->
                             ArticleRow(item = item, onClick = { onOpenArticle(item.article.id) })
                         }
                     }
@@ -336,6 +413,10 @@ private fun ArticleRow(
                     append(item.feedTitle.ifBlank { "未知来源" })
                     append(" · ")
                     append(ReaderFormat.relativeTime(article.publishedAt))
+                    if (article.imageUrls.isNotEmpty()) {
+                        append(" · 图")
+                        append(article.imageUrls.size)
+                    }
                 },
                 style = InkType.meta,
                 modifier = Modifier.weight(1f),

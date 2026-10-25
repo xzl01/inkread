@@ -88,6 +88,7 @@ fun ReaderScreen(
     var scrollPercent by remember(currentArticleId) { mutableStateOf(0) }
     var pageHint by remember(currentArticleId) { mutableStateOf<String?>(null) }
     var actionBarVisible by remember { mutableStateOf(false) }
+    var showGallery by remember(currentArticleId) { mutableStateOf(false) }
 
     val forceScroll = bodyText.length > PaginationEngine.MAX_PAGED_CHARS
     val useScroll = settings.readingMode == ReadingMode.SCROLL || pagedState.degraded || forceScroll
@@ -131,6 +132,9 @@ fun ReaderScreen(
             }
         }
     }
+    LaunchedEffect(showGallery) {
+        if (!showGallery) runCatching { focusRequester.requestFocus() }
+    }
 
     val goToNextPage: () -> Unit = {
         vm.dismissHint()
@@ -170,6 +174,7 @@ fun ReaderScreen(
         }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -189,6 +194,13 @@ fun ReaderScreen(
                         contentDescription = if (article.article.isStarred) "取消收藏" else "收藏",
                         tint = if (article.article.isStarred) InkColor.unread else InkColor.ink,
                         onClick = vm::toggleStar,
+                    )
+                }
+                if (article != null && article.article.imageUrls.isNotEmpty()) {
+                    InkGlyphButton(
+                        glyph = "▣",
+                        contentDescription = "查看图片",
+                        onClick = { showGallery = true },
                     )
                 }
                 InkGlyphButton(
@@ -255,6 +267,8 @@ fun ReaderScreen(
                     isStarred = article.article.isStarred,
                     hasPrevious = uiState.adjacent.previousId != null,
                     hasNext = uiState.adjacent.nextId != null,
+                    imageCount = article.article.imageUrls.size,
+                    onOpenImages = { showGallery = true },
                     onFontSizeDelta = { delta ->
                         vm.updateSettings { current: ReaderSettings ->
                             current.copy(
@@ -294,6 +308,15 @@ fun ReaderScreen(
                 visible = settings.showReadingProgress || statusHint != null,
             )
         }
+    }
+
+    if (showGallery && article != null && article.article.imageUrls.isNotEmpty()) {
+        ImageGalleryOverlay(
+            urls = article.article.imageUrls,
+            referer = article.article.url ?: article.feedSiteUrl,
+            onClose = { showGallery = false },
+        )
+    }
     }
 }
 
