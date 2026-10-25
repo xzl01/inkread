@@ -93,7 +93,7 @@ fun ReaderScreen(
 
     val canFetchFullText = article?.let { current ->
         !current.article.url.isNullOrBlank() &&
-            (current.article.isPartial || current.article.contentText.length < 600)
+            (current.article.isPartial || current.article.contentText.length < 2_000)
     } == true
     val forceScroll = bodyText.length > PaginationEngine.MAX_PAGED_CHARS
     val useScroll = settings.readingMode == ReadingMode.SCROLL || pagedState.degraded || forceScroll

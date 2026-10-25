@@ -80,8 +80,10 @@ internal class SqliteArticleRepository(
         }
         val extracted = ArticleExtractor.extract(response.body, response.url)
             ?: return@withContext FullTextResult.Failure("无法从原网页提取正文，可能需要登录或页面结构特殊")
-        if (extracted.text.length <= item.article.contentText.length) {
-            return@withContext FullTextResult.Failure("原网页没有比当前摘要更长的正文")
+        val oldText = item.article.contentText
+        val oldLooksLikeChrome = CHROME_MARKERS.any { oldText.contains(it) }
+        if (extracted.text.length <= oldText.length && !oldLooksLikeChrome) {
+            return@withContext FullTextResult.Failure("原网页没有比当前内容更长的正文")
         }
         val contentText = HtmlToText.stripBoilerplate(extracted.text).take(200_000)
         articleDao.updateFullContent(
@@ -91,6 +93,12 @@ internal class SqliteArticleRepository(
             imageUrls = extracted.imageUrls,
         )
         FullTextResult.Success(contentText.length)
+    }
+
+    private companion object {
+        val CHROME_MARKERS = listOf(
+            "Matrix 首页推荐", "微信扫码分享", "主作者", "联合作者", "责任编辑", "分享到微博",
+        )
     }
 
     override suspend fun storageStats(): StorageStats = withContext(Dispatchers.IO) {

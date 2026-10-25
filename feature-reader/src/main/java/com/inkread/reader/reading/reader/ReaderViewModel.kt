@@ -97,8 +97,8 @@ class ReaderViewModel(
                     loading = false,
                 )
                 // RSS 只有摘要的文章：进入阅读页后自动尝试补全一次，失败保留摘要并显示按钮。
-                if (item.article.isPartial && !item.article.url.isNullOrBlank() &&
-                    autoFetchTried.add(id)
+                if ((item.article.isPartial || item.article.contentText.length < 600) &&
+                    !item.article.url.isNullOrBlank() && autoFetchTried.add(id)
                 ) {
                     fetchFullText()
                 }
