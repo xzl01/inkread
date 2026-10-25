@@ -5,7 +5,7 @@
 > 为**彩色电子墨水屏 Android 阅读器**打造的 RSS 订阅阅读器。
 > 零动画、高对比、整页翻页、离线可读 —— 把 RSS 阅读做成纸书体验。
 
-- 包名：`com.inkread.reader` ｜ 版本：`0.5.1` ｜ 最低系统：Android 8.0 (API 26)
+- 包名：`com.inkread.reader` ｜ 版本：`0.6.0` ｜ 最低系统：Android 8.0 (API 26)
 - 技术栈：Kotlin + Jetpack Compose（手写墨水屏组件）+ SQLite + OkHttp + WorkManager
 - 无 Google 服务依赖（国产墨水屏设备可直接安装）
 - 源码仓库：<https://github.com/xzl01/inkread>
@@ -32,6 +32,10 @@
 |---|---|---|
 | ![主页翻页](docs/screenshots/home-paging.png) | ![看图](docs/screenshots/image-gallery.png) | ![图文混排](docs/screenshots/reader-inline-images.png) |
 
+| 自定义字体（系统字体 / 导入） | 使用 MiSans 阅读 |
+|---|---|
+| ![字体设置](docs/screenshots/settings-custom-font.png) | ![自定义字体阅读](docs/screenshots/reader-custom-font.png) |
+
 ## 为什么单独做一个 RSS 阅读器
 
 通用 RSS App 在墨水屏上体验普遍很差：
@@ -57,6 +61,7 @@
 - **获取全文**：RSS 只给摘要时（少数派等），阅读页顶栏出现「⇩」；点一下抓取原文网页并提取正文/图片，失败保留摘要。旧文章会用正文长度自动判断，也可以手动补全。
 - **图文混排**：文章有配图时自动使用「图文滚动模式」，图片按段落均匀插入正文，不再只能在看图页浏览；顶栏「▣」仍可全屏逐张看图。
 - **阅读页按键翻页**：分页模式用音量键 / PageUp / PageDown 切页；图文滚动模式用同样按键按一屏滚动，不会弹出系统音量条。
+- **自定义字体**：内置宋体/黑体外，可选择设备里的中文字体（思源宋体/黑体、MiSans、霞鹜文楷、楷体、方正系列等），或从文件导入 TTF/OTF；阅读页与设置预览实时生效。
 - **阅读**：纯文本优雅排版、整页翻页、进度显示、上一篇/下一篇、收藏、标记已读、打开原文、阅读时常亮。
 - **离线**：正文在同步时已清洗为纯文本入库，断网可读；设置页可清理缓存。
 - **格式**：RSS 2.0 / Atom 1.0 / RSS 1.0(RDF)，兼容 `content:encoded` 全文输出。
@@ -69,11 +74,11 @@
 ```bash
 # 一键出 APK（默认 release，可直接安装）
 bash scripts/build-apk.sh
-# 产物：dist/inkread-v0.5.1-release.apk（附 sha256）
+# 产物：dist/inkread-v0.6.0-release.apk（附 sha256）
 
 # debug 包（含 Compose 调试工具，开发用）
 bash scripts/build-apk.sh debug
-# 产物：dist/inkread-v0.5.1-debug.apk
+# 产物：dist/inkread-v0.6.0-debug.apk
 
 # 也可以直接用 Gradle（本仓开发环境会用 .tooling 里的 JDK 21，否则用 ./gradlew）
 bash scripts/dev-gradle.sh :app:assembleRelease
@@ -96,7 +101,7 @@ bash scripts/dev-gradle.sh :app:assembleDebug
 
 ```bash
 # USB 连接阅读器，开启「开发者选项 → USB 调试」
-adb install -r dist/inkread-v0.5.1-release.apk
+adb install -r dist/inkread-v0.6.0-release.apk
 ```
 
 或把 APK 拷贝到设备上点击安装（需允许「安装未知来源应用」）。

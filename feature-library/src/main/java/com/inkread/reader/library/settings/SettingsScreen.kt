@@ -1,6 +1,8 @@
 package com.inkread.reader.library.settings
 
 import android.content.Context
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -78,6 +80,26 @@ fun SettingsScreen(onBack: () -> Unit) {
     val notice by vm.notice.collectAsStateWithLifecycle()
     val versionName = remember(ctx) { readVersionName(ctx) }
 
+    // 字体选择器 / 字体导入
+    var showFontPicker by remember { mutableStateOf(false) }
+    val importFontLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            FontStore.importFont(ctx, uri)
+                .onSuccess { option ->
+                    vm.update {
+                        it.copy(customFontPath = option.path, customFontName = option.name)
+                    }
+                    vm.showMessage("已导入字体：${option.name}")
+                    showFontPicker = false
+                }
+                .onFailure {
+                    vm.showMessage("导入字体失败：${it.message ?: "未知错误"}", isError = true)
+                }
+        }
+    }
+
     // 清理按钮的二次确认：3 秒内不再次点击就自动撤销
     var armed by remember { mutableStateOf<CacheAction?>(null) }
     LaunchedEffect(armed) {
@@ -88,6 +110,7 @@ fun SettingsScreen(onBack: () -> Unit) {
         }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -110,7 +133,13 @@ fun SettingsScreen(onBack: () -> Unit) {
                 .fillMaxWidth(),
             contentPadding = PaddingValues(bottom = 40.dp),
         ) {
-            item { ReadingSection(settings = settings, vm = vm) }
+            item {
+                ReadingSection(
+                    settings = settings,
+                    vm = vm,
+                    onOpenFontPicker = { showFontPicker = true },
+                )
+            }
             item { SyncSection(settings = settings, vm = vm) }
             item {
                 CacheSection(
@@ -137,12 +166,41 @@ fun SettingsScreen(onBack: () -> Unit) {
             item { AboutSection(versionName = versionName) }
         }
     }
+
+    if (showFontPicker) {
+        FontPickerOverlay(
+            settings = settings,
+            onClose = { showFontPicker = false },
+            onSelectBuiltin = { font ->
+                vm.update { it.copy(font = font, customFontPath = null, customFontName = null) }
+                showFontPicker = false
+            },
+            onSelectFile = { option ->
+                vm.update { it.copy(customFontPath = option.path, customFontName = option.name) }
+                showFontPicker = false
+            },
+            onImport = {
+                runCatching {
+                    importFontLauncher.launch(
+                        arrayOf("font/ttf", "font/otf", "application/octet-stream", "*/*"),
+                    )
+                }.onFailure {
+                    vm.showMessage("无法打开文件选择器：${it.message ?: "未知错误"}", isError = true)
+                }
+            },
+        )
+    }
+    }
 }
 
 /* ------------------------------- 阅读分组 ------------------------------- */
 
 @Composable
-private fun ReadingSection(settings: ReaderSettings, vm: SettingsViewModel) {
+private fun ReadingSection(
+    settings: ReaderSettings,
+    vm: SettingsViewModel,
+    onOpenFontPicker: () -> Unit,
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         InkSectionHeader("阅读")
 
@@ -180,12 +238,45 @@ private fun ReadingSection(settings: ReaderSettings, vm: SettingsViewModel) {
         )
         RowDivider()
 
-        ChipSettingRow(title = "字体") {
+        ChipSettingRow(title = "字体", subtitle = "内置宋体/黑体，或选择系统字体/导入自己的字体") {
             ReaderFont.entries.forEach { font ->
                 InkChip(
                     text = font.label,
-                    selected = settings.font == font,
-                    onClick = { vm.update { it.copy(font = font) } },
+                    selected = settings.customFontPath == null && settings.font == font,
+                    onClick = {
+                        vm.update { it.copy(font = font, customFontPath = null, customFontName = null) }
+                    },
+                )
+            }
+            InkChip(
+                text = "更多字体…",
+                selected = settings.customFontPath != null,
+                onClick = onOpenFontPicker,
+            )
+        }
+        if (settings.customFontPath != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = InkDimen.pagePadding.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "当前字体：${settings.fontLabel}",
+                    style = InkType.body,
+                    modifier = Modifier.weight(1f),
+                )
+                com.inkread.reader.ui.components.InkTextButton(
+                    text = "恢复默认",
+                    onClick = {
+                        vm.update {
+                            it.copy(
+                                customFontPath = null,
+                                customFontName = null,
+                                font = ReaderFont.SERIF,
+                            )
+                        }
+                    },
                 )
             }
         }
@@ -317,7 +408,7 @@ private fun ReadingPreview(settings: ReaderSettings) {
                 style = InkType.reading(
                     fontSizeSp = settings.fontSizeSp,
                     lineHeightMultiplier = settings.lineHeightMultiplier,
-                    fontFamily = settings.font.toFontFamily(),
+                    fontFamily = settings.toFontFamily(),
                 ),
             )
         }

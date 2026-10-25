@@ -46,6 +46,8 @@ class SettingsViewModel(
         _notice.value = null
     }
 
+    fun showMessage(text: String, isError: Boolean = false) = notify(text, isError)
+
     /**
      * 修改设置并持久化。同步相关字段（周期 / 仅 Wi-Fi）变化时重新应用后台调度。
      */

@@ -4,12 +4,30 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.inkread.reader.core.prefs.ReaderFont
+import com.inkread.reader.core.prefs.ReaderSettings
+import java.io.File
 
 /** 阅读器字体枚举 → Compose 字体族。 */
 fun ReaderFont.toFontFamily(): FontFamily = if (serif) FontFamily.Serif else FontFamily.SansSerif
+
+/** 阅读设置 → Compose 字体族：优先使用用户选择的字体文件，失败/未设置时回退宋体/黑体。 */
+fun ReaderSettings.toFontFamily(): FontFamily {
+    val path = customFontPath?.takeIf { it.isNotBlank() }
+    if (path != null) {
+        val file = File(path)
+        if (file.isFile) {
+            runCatching {
+                FontFamily(Font(file, FontWeight.Normal, FontStyle.Normal))
+            }.getOrNull()?.let { return it }
+        }
+    }
+    return font.toFontFamily()
+}
 
 /**
  * 全局文字样式。墨水屏上字号、行距都比手机常规值更宽松：

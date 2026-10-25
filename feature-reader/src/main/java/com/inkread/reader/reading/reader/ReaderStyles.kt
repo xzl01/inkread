@@ -14,7 +14,7 @@ internal const val READER_VERTICAL_PADDING_DP = 12
 /** 阅读正文样式（由阅读设置决定，分页测量与渲染共用）。 */
 @Composable
 internal fun rememberReadingStyle(settings: ReaderSettings): TextStyle {
-    val fontFamily = remember(settings.font) { settings.font.toFontFamily() }
+    val fontFamily = remember(settings.font, settings.customFontPath) { settings.toFontFamily() }
     return remember(settings.fontSizeSp, settings.lineHeightMultiplier, fontFamily) {
         InkType.reading(
             fontSizeSp = settings.fontSizeSp,
@@ -27,7 +27,7 @@ internal fun rememberReadingStyle(settings: ReaderSettings): TextStyle {
 /** 阅读页第一页大标题样式（比正文大 4sp，行距更紧）。 */
 @Composable
 internal fun rememberReadingTitleStyle(settings: ReaderSettings): TextStyle {
-    val fontFamily = remember(settings.font) { settings.font.toFontFamily() }
+    val fontFamily = remember(settings.font, settings.customFontPath) { settings.toFontFamily() }
     return remember(settings.fontSizeSp, fontFamily) {
         val titleSize = (settings.fontSizeSp + 4f).coerceIn(16f, 34f)
         InkType.reading(

@@ -33,6 +33,8 @@ class SharedPrefsSettingsRepository(context: Context) : SettingsRepository {
             putFloat(KEY_FONT_SIZE, next.fontSizeSp)
             putFloat(KEY_LINE_HEIGHT, next.lineHeightMultiplier)
             putString(KEY_FONT, next.font.name)
+            putString(KEY_CUSTOM_FONT_PATH, next.customFontPath)
+            putString(KEY_CUSTOM_FONT_NAME, next.customFontName)
             putInt(KEY_PAGE_MARGIN, next.pageMarginDp)
             putString(KEY_READING_MODE, next.readingMode.name)
             putBoolean(KEY_SHOW_PROGRESS, next.showReadingProgress)
@@ -50,6 +52,8 @@ class SharedPrefsSettingsRepository(context: Context) : SettingsRepository {
             fontSizeSp = prefs.getFloat(KEY_FONT_SIZE, defaults.fontSizeSp),
             lineHeightMultiplier = prefs.getFloat(KEY_LINE_HEIGHT, defaults.lineHeightMultiplier),
             font = enumOrDefault(prefs.getString(KEY_FONT, null), defaults.font),
+            customFontPath = prefs.getString(KEY_CUSTOM_FONT_PATH, null),
+            customFontName = prefs.getString(KEY_CUSTOM_FONT_NAME, null),
             pageMarginDp = prefs.getInt(KEY_PAGE_MARGIN, defaults.pageMarginDp),
             readingMode = enumOrDefault(prefs.getString(KEY_READING_MODE, null), defaults.readingMode),
             showReadingProgress = prefs.getBoolean(KEY_SHOW_PROGRESS, defaults.showReadingProgress),
@@ -72,6 +76,8 @@ class SharedPrefsSettingsRepository(context: Context) : SettingsRepository {
         const val KEY_FONT_SIZE = "font_size_sp"
         const val KEY_LINE_HEIGHT = "line_height_multiplier"
         const val KEY_FONT = "font"
+        const val KEY_CUSTOM_FONT_PATH = "custom_font_path"
+        const val KEY_CUSTOM_FONT_NAME = "custom_font_name"
         const val KEY_PAGE_MARGIN = "page_margin_dp"
         const val KEY_READING_MODE = "reading_mode"
         const val KEY_SHOW_PROGRESS = "show_reading_progress"

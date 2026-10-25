@@ -19,6 +19,10 @@ data class ReaderSettings(
     val fontSizeSp: Float = 20f,
     val lineHeightMultiplier: Float = 1.8f,
     val font: ReaderFont = ReaderFont.SERIF,
+    /** 自定义字体文件路径（system/fonts 或 App 导入到 files/fonts）；null = 使用 [font] 枚举。 */
+    val customFontPath: String? = null,
+    /** 自定义字体显示名（设置页/预览用）。 */
+    val customFontName: String? = null,
     val pageMarginDp: Int = 20,
     val readingMode: ReadingMode = ReadingMode.PAGED,
     val showReadingProgress: Boolean = true,
@@ -43,7 +47,8 @@ data class ReaderSettings(
         val retentionOptions = listOf(0, 7, 30, 90, 365)
     }
 
-    val fontLabel: String get() = font.label
+    val fontLabel: String
+        get() = customFontName?.takeIf { it.isNotBlank() } ?: font.label
 }
 
 /** 设置的读写入口。实现需保证 [settings] 在进程内唯一的真相来源。 */
