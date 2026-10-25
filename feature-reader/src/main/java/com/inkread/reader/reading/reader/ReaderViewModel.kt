@@ -11,6 +11,7 @@ import com.inkread.reader.core.model.ArticleWithFeed
 import com.inkread.reader.core.prefs.ReaderSettings
 import com.inkread.reader.core.prefs.SettingsRepository
 import com.inkread.reader.core.repo.ArticleRepository
+import com.inkread.reader.core.repo.FullTextResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -54,6 +55,11 @@ class ReaderViewModel(
 
     /** 全局阅读设置（字号/行距/字体/模式/进度/常亮）。 */
     val settings: StateFlow<ReaderSettings> = settingsRepository.settings
+
+    private val _fetchingFullText = MutableStateFlow(false)
+
+    /** 是否正在抓取全文（顶栏按钮显示 … 并禁用）。 */
+    val fetchingFullText: StateFlow<Boolean> = _fetchingFullText.asStateFlow()
 
     private val _hint = MutableStateFlow<String?>(null)
 
@@ -116,6 +122,41 @@ class ReaderViewModel(
             return
         }
         load(nextId)
+    }
+
+    /** 抓取原网页全文（RSS 只给摘要时使用）。 */
+    fun fetchFullText() {
+        val current = _uiState.value.article ?: return
+        if (_fetchingFullText.value) return
+        val articleId = current.article.id
+        _fetchingFullText.value = true
+        showHint("正在获取全文…")
+        viewModelScope.launch {
+            try {
+                when (val result = withContext(Dispatchers.IO) { articleRepository.fetchFullText(articleId) }) {
+                    is FullTextResult.Success -> {
+                        val updated = withContext(Dispatchers.IO) { articleRepository.getArticle(articleId) }
+                        if (updated != null) {
+                            _uiState.update { state ->
+                                if (state.article?.article?.id == articleId) {
+                                    state.copy(article = updated.copy(article = updated.article.copy(isRead = true)))
+                                } else {
+                                    state
+                                }
+                            }
+                        }
+                        showHint("已获取全文（${result.chars} 字）")
+                    }
+                    is FullTextResult.Failure -> showHint("获取全文失败：${result.message}")
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                showHint("获取全文失败：${error.message ?: "未知错误"}")
+            } finally {
+                _fetchingFullText.value = false
+            }
+        }
     }
 
     /** 收藏 / 取消收藏（先本地更新，失败回滚）。 */

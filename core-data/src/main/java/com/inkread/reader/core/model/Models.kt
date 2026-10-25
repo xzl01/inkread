@@ -52,6 +52,8 @@ data class Article(
     val isStarred: Boolean = false,
     /** 正文中的图片地址（同步时从 HTML 提取，阅读页「看图」使用）。 */
     val imageUrls: List<String> = emptyList(),
+    /** RSS 只给了摘要（带「查看全文」钩子等），可通过「获取全文」重新抓取原网页。 */
+    val isPartial: Boolean = false,
 )
 
 /** 文章 + 所属订阅源信息（列表/阅读页展示用）。 */

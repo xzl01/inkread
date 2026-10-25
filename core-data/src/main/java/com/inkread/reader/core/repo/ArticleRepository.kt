@@ -6,6 +6,14 @@ import com.inkread.reader.core.model.AdjacentArticles
 import com.inkread.reader.core.model.StorageStats
 import kotlinx.coroutines.flow.Flow
 
+/** 「获取全文」的结果。 */
+sealed interface FullTextResult {
+    /** 成功抓取并更新正文，[chars] 为新的正文字数。 */
+    data class Success(val chars: Int) : FullTextResult
+    /** 失败原因（中文，可直接展示）。 */
+    data class Failure(val message: String) : FullTextResult
+}
+
 /**
  * 文章读取与状态维护。
  *
@@ -32,6 +40,9 @@ interface ArticleRepository {
     suspend fun markAllRead(filter: ArticleFilter)
 
     suspend fun setStarred(id: Long, starred: Boolean)
+
+    /** RSS 只给了摘要时，抓取原文网页并更新正文。 */
+    suspend fun fetchFullText(id: Long): FullTextResult
 
     suspend fun storageStats(): StorageStats
 

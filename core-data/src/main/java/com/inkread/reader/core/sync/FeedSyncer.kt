@@ -89,9 +89,10 @@ internal class FeedSyncer(
         feedDao.updateInfo(feed.id, parsed.title, parsed.siteUrl)
 
         val articles = parsed.articles.map { parsedArticle ->
-            val contentText = HtmlToText.stripBoilerplate(
-                HtmlToText.toText(parsedArticle.contentHtml),
-            ).take(MAX_CONTENT_CHARS)
+            val rawText = HtmlToText.toText(parsedArticle.contentHtml)
+            val cleanedText = HtmlToText.stripBoilerplate(rawText)
+            val isPartial = cleanedText != rawText.trim()
+            val contentText = cleanedText.take(MAX_CONTENT_CHARS)
             val imageUrls = HtmlImages.extract(
                 html = parsedArticle.contentHtml,
                 baseUrl = parsedArticle.url ?: feed.siteUrl,
@@ -107,6 +108,7 @@ internal class FeedSyncer(
                 contentText = contentText,
                 previewText = HtmlToText.previewFromText(contentText),
                 imageUrls = imageUrls,
+                isPartial = isPartial,
             )
         }
         val inserted = articleDao.insertArticles(feed.id, articles)

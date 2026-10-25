@@ -63,6 +63,7 @@ internal class ArticleDao(private val database: InkReadDatabase) {
                     put("is_read", if (article.isRead) 1 else 0)
                     put("is_starred", if (article.isStarred) 1 else 0)
                     put("image_urls", article.imageUrls.joinToString("\n"))
+                    put("is_partial", if (article.isPartial) 1 else 0)
                 }
                 val rowId = db.insertWithOnConflict(TABLE, null, values, SQLiteDatabase.CONFLICT_IGNORE)
                 if (rowId != -1L) inserted++
@@ -116,6 +117,7 @@ internal class ArticleDao(private val database: InkReadDatabase) {
                 if (article.imageUrls.isEmpty()) continue
                 val values = ContentValues().apply {
                     put("image_urls", article.imageUrls.joinToString("\n"))
+                    put("is_partial", if (article.isPartial) 1 else 0)
                 }
                 changed += db.update(
                     TABLE,
@@ -130,6 +132,24 @@ internal class ArticleDao(private val database: InkReadDatabase) {
         }
         if (changed > 0) database.revision.bump()
         return changed
+    }
+
+    /** 抓到全文后更新正文/预览/图片，并清除「摘要」标记。 */
+    fun updateFullContent(
+        id: Long,
+        contentText: String,
+        previewText: String,
+        imageUrls: List<String>,
+    ): Boolean {
+        val values = ContentValues().apply {
+            put("content_text", contentText)
+            put("preview_text", previewText)
+            put("image_urls", imageUrls.joinToString("\n"))
+            put("is_partial", 0)
+        }
+        val rows = db.update(TABLE, values, "id = ?", arrayOf(id.toString()))
+        if (rows > 0) database.revision.bump()
+        return rows > 0
     }
 
     fun markRead(id: Long, read: Boolean): Boolean {
@@ -257,6 +277,7 @@ internal class ArticleDao(private val database: InkReadDatabase) {
                 ?.filter { it.isNotEmpty() }
                 ?.toList()
                 ?: emptyList(),
+            isPartial = getInt(getColumnIndexOrThrow("is_partial")) != 0,
         )
         val feedCustomTitle = getString(getColumnIndexOrThrow("feed_custom_title"))
         val feedTitle = getString(getColumnIndexOrThrow("feed_title")) ?: ""
@@ -271,7 +292,8 @@ internal class ArticleDao(private val database: InkReadDatabase) {
         const val TABLE = InkReadDatabase.TABLE_ARTICLES
 
         const val SQL_SELECT = "SELECT a.id, a.feed_id, a.guid, a.url, a.title, a.author, " +
-            "a.published_at, a.fetched_at, a.content_text, a.preview_text, a.is_read, a.is_starred, a.image_urls, " +
+            "a.published_at, a.fetched_at, a.content_text, a.preview_text, a.is_read, a.is_starred, " +
+            "a.image_urls, a.is_partial, " +
             "f.title AS feed_title, f.custom_title AS feed_custom_title, f.site_url AS feed_site_url " +
             "FROM articles a INNER JOIN feeds f ON f.id = a.feed_id"
     }

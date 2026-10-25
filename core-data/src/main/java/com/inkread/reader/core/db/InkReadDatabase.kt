@@ -43,11 +43,14 @@ class InkReadDatabase private constructor(context: Context) : SQLiteOpenHelper(
         if (oldVersion < 2) {
             db.execSQL("ALTER TABLE articles ADD COLUMN image_urls TEXT NOT NULL DEFAULT ''")
         }
+        if (oldVersion < 3) {
+            db.execSQL("ALTER TABLE articles ADD COLUMN is_partial INTEGER NOT NULL DEFAULT 0")
+        }
     }
 
     companion object {
         const val DB_NAME = "inkread.db"
-        const val DB_VERSION = 2
+        const val DB_VERSION = 3
 
         const val TABLE_FEEDS = "feeds"
         const val TABLE_ARTICLES = "articles"
@@ -84,6 +87,7 @@ class InkReadDatabase private constructor(context: Context) : SQLiteOpenHelper(
                 is_read INTEGER NOT NULL DEFAULT 0,
                 is_starred INTEGER NOT NULL DEFAULT 0,
                 image_urls TEXT NOT NULL DEFAULT '',
+                is_partial INTEGER NOT NULL DEFAULT 0,
                 UNIQUE(feed_id, guid)
             )
         """

@@ -77,6 +77,7 @@ fun ReaderScreen(
     val uiState by vm.uiState.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val externalHint by vm.hint.collectAsStateWithLifecycle()
+    val fetchingFullText by vm.fetchingFullText.collectAsStateWithLifecycle()
     val currentArticleId by vm.articleId.collectAsStateWithLifecycle()
 
     val article = uiState.article
@@ -90,6 +91,10 @@ fun ReaderScreen(
     var actionBarVisible by remember { mutableStateOf(false) }
     var showGallery by remember(currentArticleId) { mutableStateOf(false) }
 
+    val canFetchFullText = article?.let { current ->
+        !current.article.url.isNullOrBlank() &&
+            (current.article.isPartial || current.article.contentText.length < 600)
+    } == true
     val forceScroll = bodyText.length > PaginationEngine.MAX_PAGED_CHARS
     val useScroll = settings.readingMode == ReadingMode.SCROLL || pagedState.degraded || forceScroll
     val scrollNotice = when {
@@ -188,6 +193,14 @@ fun ReaderScreen(
             subtitle = article?.feedTitle,
             onBack = onBack,
             actions = {
+                if (canFetchFullText) {
+                    InkGlyphButton(
+                        glyph = if (fetchingFullText) "…" else "⇩",
+                        contentDescription = "获取全文",
+                        enabled = !fetchingFullText,
+                        onClick = vm::fetchFullText,
+                    )
+                }
                 if (article != null) {
                     InkGlyphButton(
                         glyph = if (article.article.isStarred) "★" else "☆",

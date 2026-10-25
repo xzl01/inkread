@@ -37,7 +37,7 @@ internal class CoreDataLayer private constructor(context: Context) {
     val feedRepository: FeedRepository =
         SqliteFeedRepository(database, feedDao, fetcher, syncer)
     val articleRepository: ArticleRepository =
-        SqliteArticleRepository(database, articleDao, feedDao)
+        SqliteArticleRepository(database, articleDao, feedDao, fetcher)
     val syncController: SyncController = DefaultSyncController(feedDao, syncer)
     val syncScheduler: SyncScheduler = WorkManagerSyncScheduler(context)
 
