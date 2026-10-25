@@ -3,6 +3,8 @@ package com.inkread.reader.reading.reader
 import android.view.KeyEvent as NativeKeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -43,6 +46,7 @@ import com.inkread.reader.ui.components.InkTopBar
 import com.inkread.reader.ui.theme.InkColor
 import com.inkread.reader.ui.theme.InkDimen
 import com.inkread.reader.ui.theme.InkType
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
@@ -129,8 +133,10 @@ fun ReaderScreen(
 
     // 音量键翻页需要焦点。焦点节点要等布局完成才可请求，失败时等下一帧重试。
     val focusRequester = remember { FocusRequester() }
+    val richListState = remember(currentArticleId) { LazyListState() }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(useScroll, article?.article?.id) {
-        if (!useScroll && article != null) {
+        if (article != null) {
             repeat(5) {
                 try {
                     focusRequester.requestFocus()
@@ -162,20 +168,33 @@ fun ReaderScreen(
         }
     }
     val toggleActionBar: () -> Unit = { actionBarVisible = !actionBarVisible }
+    val scrollByPage: (Int) -> Unit = { direction ->
+        val viewport = richListState.layoutInfo.viewportEndOffset - richListState.layoutInfo.viewportStartOffset
+        val step = (if (viewport > 0) viewport else 1000) * 0.9f * direction
+        scope.launch { runCatching { richListState.scrollBy(step) } }
+    }
     val handleVolumeKey: (KeyEvent) -> Boolean = { event ->
         val native = event.nativeKeyEvent
-        val isPageMode = !useScroll && article != null
-        if (!isPageMode || native.action != NativeKeyEvent.ACTION_DOWN) {
+        if (article == null || native.action != NativeKeyEvent.ACTION_DOWN) {
             false
         } else {
-            // 音量键翻页：长按重复事件也消费掉，避免同时弹出系统音量条。
+            // 音量键 / 翻页键：分页模式切页；图文滚动模式按一屏滚动。
+            // 长按重复事件也消费掉，避免同时弹出系统音量条。
             when (native.keyCode) {
-                NativeKeyEvent.KEYCODE_VOLUME_DOWN -> {
-                    if (native.repeatCount == 0) goToNextPage()
+                NativeKeyEvent.KEYCODE_VOLUME_DOWN,
+                NativeKeyEvent.KEYCODE_PAGE_DOWN,
+                -> {
+                    if (native.repeatCount == 0) {
+                        if (useScroll) scrollByPage(1) else goToNextPage()
+                    }
                     true
                 }
-                NativeKeyEvent.KEYCODE_VOLUME_UP -> {
-                    if (native.repeatCount == 0) goToPreviousPage()
+                NativeKeyEvent.KEYCODE_VOLUME_UP,
+                NativeKeyEvent.KEYCODE_PAGE_UP,
+                -> {
+                    if (native.repeatCount == 0) {
+                        if (useScroll) scrollByPage(-1) else goToPreviousPage()
+                    }
                     true
                 }
                 else -> false
@@ -261,6 +280,7 @@ fun ReaderScreen(
                         notice = scrollNotice,
                         onPercentChange = { percent -> scrollPercent = percent },
                         imageUrls = imageUrls,
+                        listState = richListState,
                     )
                 }
                 else -> key(currentArticleId) {
