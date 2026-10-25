@@ -285,7 +285,7 @@ private fun ReadingSection(
 
         ChipSettingRow(
             title = "图片增强",
-            subtitle = "针对彩色墨水屏提高图片饱和度/对比度；只影响图片",
+            subtitle = "自动按图片亮度/饱和度调整；也可手动选轻/强/关闭",
         ) {
             ImageEnhancement.entries.forEach { enhancement ->
                 InkChip(

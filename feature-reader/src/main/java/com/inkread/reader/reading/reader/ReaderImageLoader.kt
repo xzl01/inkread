@@ -54,12 +54,62 @@ internal object ReaderImageLoader {
         applyEnhancement(bitmap, enhancement)
     }
 
-    /** 彩色墨水屏增强：饱和度 + 对比度 + 轻微提亮；关闭时直接返回原图。 */
+    private data class ImageStats(
+        val meanLuma: Float,
+        val stdLuma: Float,
+        val avgChroma: Float,
+    )
+
+    /**
+     * 彩色墨水屏增强：
+     * - 自动：统计亮度均值、亮度标准差、平均色度，再决定饱和度/对比度/提亮幅度；
+     *   灰度高（接近黑白）的图片不做饱和，改为更强对比度；
+     * - 轻/强：固定参数；关闭：原图。
+     */
     private fun applyEnhancement(source: Bitmap, enhancement: ImageEnhancement): Bitmap {
         if (enhancement == ImageEnhancement.OFF) return source
-        val matrix = ColorMatrix().apply { setSaturation(enhancement.saturation) }
-        val c = enhancement.contrast
-        val translate = 128f * (1f - c) + enhancement.brightness
+        val (saturation, contrast, brightness) = when (enhancement) {
+            ImageEnhancement.AUTO -> autoParams(analyze(source))
+            ImageEnhancement.LIGHT -> Triple(1.22f, 1.06f, 4f)
+            ImageEnhancement.STRONG -> Triple(1.40f, 1.12f, 8f)
+            ImageEnhancement.OFF -> Triple(1f, 1f, 0f)
+        }
+        return renderMatrix(source, saturation, contrast, brightness)
+    }
+
+    private fun autoParams(stats: ImageStats): Triple<Float, Float, Float> {
+        val grayscale = stats.avgChroma < 8f
+        val saturation = if (grayscale) {
+            1f
+        } else {
+            when {
+                stats.avgChroma < 18f -> 1.30f
+                stats.avgChroma < 40f -> 1.20f
+                stats.avgChroma < 70f -> 1.12f
+                else -> 1.06f
+            }
+        }
+        var contrast = when {
+            stats.stdLuma < 40f -> 1.24f
+            stats.stdLuma < 60f -> 1.14f
+            stats.stdLuma < 80f -> 1.08f
+            else -> 1.04f
+        }
+        if (grayscale) contrast = (contrast + 0.04f).coerceAtMost(1.28f)
+        // 让画面亮度靠近中亮部，避免彩色墨水屏上整体发灰或过暗。
+        val brightness = ((132f - stats.meanLuma) * 0.18f).coerceIn(-10f, 14f)
+        return Triple(saturation, contrast, brightness)
+    }
+
+    private fun renderMatrix(
+        source: Bitmap,
+        saturation: Float,
+        contrast: Float,
+        brightness: Float,
+    ): Bitmap {
+        val matrix = ColorMatrix().apply { setSaturation(saturation.coerceIn(1f, 1.4f)) }
+        val c = contrast.coerceIn(1f, 1.3f)
+        val translate = 128f * (1f - c) + brightness
         matrix.postConcat(
             ColorMatrix(
                 floatArrayOf(
@@ -77,6 +127,44 @@ internal object ReaderImageLoader {
         }
         canvas.drawBitmap(source, 0f, 0f, paint)
         return output
+    }
+
+    /** 采样约 1.2 万像素，统计亮度与色度；避免对整张大图逐像素扫描。 */
+    private fun analyze(source: Bitmap): ImageStats {
+        val width = source.width
+        val height = source.height
+        val step = maxOf(1, kotlin.math.sqrt((width * height / 12_000f)).toInt())
+        var count = 0
+        var sumLuma = 0.0
+        var sumLumaSq = 0.0
+        var sumChroma = 0.0
+        var y = 0
+        while (y < height) {
+            var x = 0
+            while (x < width) {
+                val pixel = source.getPixel(x, y)
+                val r = (pixel shr 16) and 0xFF
+                val g = (pixel shr 8) and 0xFF
+                val b = pixel and 0xFF
+                val luma = 0.299f * r + 0.587f * g + 0.114f * b
+                val max = maxOf(r, g, b)
+                val min = minOf(r, g, b)
+                sumLuma += luma
+                sumLumaSq += luma.toDouble() * luma
+                sumChroma += (max - min)
+                count++
+                x += step
+            }
+            y += step
+        }
+        if (count == 0) return ImageStats(128f, 64f, 32f)
+        val mean = (sumLuma / count).toFloat()
+        val variance = (sumLumaSq / count - (sumLuma / count) * (sumLuma / count)).toFloat()
+        return ImageStats(
+            meanLuma = mean,
+            stdLuma = kotlin.math.sqrt(variance.coerceAtLeast(0f)),
+            avgChroma = (sumChroma / count).toFloat(),
+        )
     }
 
     private fun download(url: String, referer: String?, target: File) {

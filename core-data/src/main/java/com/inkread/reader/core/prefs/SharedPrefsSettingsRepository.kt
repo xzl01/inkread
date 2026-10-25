@@ -18,6 +18,19 @@ class SharedPrefsSettingsRepository(context: Context) : SettingsRepository {
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    init {
+        // v0.8.0：图片增强默认改为「自动」；旧版本默认值 LIGHT 迁移为 AUTO。
+        if (!prefs.getBoolean(KEY_ENHANCEMENT_MIGRATED, false)) {
+            val current = prefs.getString(KEY_IMAGE_ENHANCEMENT, null)
+            if (current == null || current == ImageEnhancement.LIGHT.name) {
+                prefs.edit()
+                    .putString(KEY_IMAGE_ENHANCEMENT, ImageEnhancement.AUTO.name)
+                    .apply()
+            }
+            prefs.edit().putBoolean(KEY_ENHANCEMENT_MIGRATED, true).apply()
+        }
+    }
+
     private val _settings = MutableStateFlow(load())
 
     override val settings: StateFlow<ReaderSettings> = _settings.asStateFlow()
@@ -86,6 +99,7 @@ class SharedPrefsSettingsRepository(context: Context) : SettingsRepository {
         const val KEY_PAGE_MARGIN = "page_margin_dp"
         const val KEY_READING_MODE = "reading_mode"
         const val KEY_IMAGE_ENHANCEMENT = "image_enhancement"
+        const val KEY_ENHANCEMENT_MIGRATED = "image_enhancement_v2_migrated"
         const val KEY_SHOW_PROGRESS = "show_reading_progress"
         const val KEY_KEEP_SCREEN_ON = "keep_screen_on"
         const val KEY_AUTO_REFRESH = "auto_refresh_on_open"
