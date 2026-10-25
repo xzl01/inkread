@@ -1,5 +1,6 @@
 package com.inkread.reader.reading
 
+import com.inkread.reader.core.parse.HtmlToText
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -64,7 +65,10 @@ object ReaderContent {
     private val innerNewline = Regex("[ \\t]*\\n[ \\t]*")
 
     fun buildBodyText(contentText: String): String {
-        val normalized = contentText.replace("\r\n", "\n").replace('\r', '\n').trim()
+        val normalized = HtmlToText.stripBoilerplate(contentText)
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
+            .trim()
         if (normalized.isEmpty()) return ""
         return normalized.split(blankLine)
             .map { paragraph -> paragraph.trim().replace(innerNewline, "\n") }

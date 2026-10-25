@@ -43,6 +43,7 @@ import com.inkread.reader.core.model.Article
 import com.inkread.reader.core.model.ArticleWithFeed
 import com.inkread.reader.core.model.Feed
 import com.inkread.reader.core.model.FeedWithUnread
+import com.inkread.reader.core.parse.HtmlToText
 import com.inkread.reader.core.sync.SyncResult
 import com.inkread.reader.reading.ReaderFormat
 import com.inkread.reader.ui.components.InkBottomTabs
@@ -428,9 +429,11 @@ private fun ArticleRow(
                 Text(text = "★", style = InkType.meta, color = InkColor.unread)
             }
         }
-        val preview = article.previewText.ifBlank {
-            article.contentText.replace('\n', ' ').trim()
-        }
+        val preview = HtmlToText.stripBoilerplate(
+            article.previewText.ifBlank {
+                article.contentText.replace('\n', ' ').trim()
+            },
+        )
         if (preview.isNotEmpty()) {
             Spacer(Modifier.height(4.dp))
             Text(

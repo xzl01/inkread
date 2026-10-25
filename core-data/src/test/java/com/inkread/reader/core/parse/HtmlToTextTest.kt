@@ -85,4 +85,17 @@ class HtmlToTextTest {
     fun `preview 短文本不截断且删除换行`() {
         assertEquals("第一段 第二段", HtmlToText.preview("<p>第一段</p><p>第二段</p>"))
     }
+
+    @Test
+    fun stripsReadMoreBoilerplateAtEnd() {
+        assertEquals("一句话。", HtmlToText.stripBoilerplate("一句话。查看全文"))
+        assertEquals("一句话。", HtmlToText.stripBoilerplate("一句话。 查看全文。"))
+        assertEquals("", HtmlToText.stripBoilerplate("查看全文"))
+        assertEquals("Read more stops at end", HtmlToText.stripBoilerplate("Read more stops at end"))
+        assertEquals(
+            "从硅谷计算机历史博物馆出发。",
+            HtmlToText.stripBoilerplate("从硅谷计算机历史博物馆出发。查看全文"),
+        )
+    }
+
 }

@@ -23,6 +23,11 @@ object HtmlToText {
 
     private val WHITESPACE = Regex("[ \t\u000B\u000C\u00A0\u2002\u2003\u2009\u202F]+")
 
+    /** 源站附在摘要/正文末尾的「查看全文 / 阅读原文 / Read more」等无关文字。 */
+    private val BOILERPLATE_END = Regex(
+        """(?is)\s*(?:查看全文|阅读全文|阅读原文|全文阅读|Read\s*more|Continue\s*reading|View\s*full\s*(?:article|post))\s*[。.!！]?\s*$""",
+    )
+
     private val BLOCK_TAGS = setOf(
         "p", "div", "section", "article", "header", "footer", "aside", "nav", "main",
         "figure", "figcaption", "blockquote", "pre", "table", "thead", "tbody", "tfoot",
@@ -40,6 +45,22 @@ object HtmlToText {
         var source = html
         if (DOUBLE_ENCODED.containsMatchIn(source)) source = Entities.decode(source)
         return normalize(Entities.decode(TagStripper(source).run()))
+    }
+
+    /**
+     * 去掉源站自动追加的「查看全文 / 阅读原文 / Read more」等钩子。
+     *
+     * 少数派等源会在 description 里附加 `<a>查看全文</a>`，转纯文本后会变成正文的一部分；
+     * 这里只处理**末尾**的这类短语，避免误删正文中正常出现的同名字样。
+     */
+    fun stripBoilerplate(text: String?): String {
+        if (text.isNullOrBlank()) return ""
+        var result = text.trim()
+        while (true) {
+            val next = BOILERPLATE_END.replace(result, "").trim()
+            if (next == result) return result
+            result = next
+        }
     }
 
     /** 生成列表页预览：单行、压缩空白、超过 [maxChars] 截断并加省略号。 */

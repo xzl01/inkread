@@ -7,6 +7,7 @@ import com.inkread.reader.core.model.AdjacentArticles
 import com.inkread.reader.core.model.Article
 import com.inkread.reader.core.model.ArticleFilter
 import com.inkread.reader.core.model.ArticleWithFeed
+import com.inkread.reader.core.parse.HtmlToText
 
 /**
  * `articles` 表的数据访问对象。
@@ -72,6 +73,37 @@ internal class ArticleDao(private val database: InkReadDatabase) {
         }
         if (inserted > 0) database.revision.bump()
         return inserted
+    }
+
+    /**
+     * 清理历史文章中源站追加的「查看全文 / 阅读原文 / Read more」钩子，并重新生成预览。
+     *
+     * 新同步的文章已在 [FeedSyncer] 里清理；这里用于升级后修复旧数据。
+     * 启动后在后台线程执行，只对确有变化的行写库。
+     */
+    fun cleanupBoilerplate(): Int {
+        var changed = 0
+        db.beginTransaction()
+        try {
+            db.rawQuery("SELECT id, content_text FROM articles", null).use { cursor ->
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(0)
+                    val content = cursor.getString(1) ?: ""
+                    val cleaned = HtmlToText.stripBoilerplate(content)
+                    if (cleaned == content) continue
+                    val values = ContentValues().apply {
+                        put("content_text", cleaned)
+                        put("preview_text", HtmlToText.previewFromText(cleaned))
+                    }
+                    changed += db.update(TABLE, values, "id = ?", arrayOf(id.toString()))
+                }
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        if (changed > 0) database.revision.bump()
+        return changed
     }
 
     /** 为已存在的文章补写图片地址（旧版本升级后重新同步时回填）。 */

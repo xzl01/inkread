@@ -41,6 +41,13 @@ internal class CoreDataLayer private constructor(context: Context) {
     val syncController: SyncController = DefaultSyncController(feedDao, syncer)
     val syncScheduler: SyncScheduler = WorkManagerSyncScheduler(context)
 
+    init {
+        // 升级到 v0.3.1 后修复历史文章里的「查看全文」等源站钩子（后台执行，不阻塞启动）。
+        Thread {
+            runCatching { articleDao.cleanupBoilerplate() }
+        }.start()
+    }
+
     internal companion object {
         @Volatile
         private var instance: CoreDataLayer? = null
