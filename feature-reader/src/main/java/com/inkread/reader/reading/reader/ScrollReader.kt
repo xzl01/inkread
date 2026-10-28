@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import com.inkread.reader.core.model.ArticleTable
 import com.inkread.reader.core.model.ArticleWithFeed
+import com.inkread.reader.core.parse.HtmlTables
 import com.inkread.reader.core.prefs.ImageEnhancement
 import com.inkread.reader.core.prefs.ReaderSettings
 import com.inkread.reader.reading.ReaderFormat
@@ -173,22 +174,34 @@ private fun buildBlocks(
         .split(Regex("""\n\s*\n"""))
         .map { it.trim() }
         .filter { it.isNotEmpty() }
-    val extras = tables.map { ReaderBlock.Table(it) } + imageUrls.map { ReaderBlock.Image(it) }
-    if (paragraphs.isEmpty()) return extras
-    if (extras.isEmpty()) return paragraphs.map { ReaderBlock.Text(it) }
-    val blocks = ArrayList<ReaderBlock>(paragraphs.size + extras.size)
-    var nextExtra = 0
+    val images = imageUrls.map { ReaderBlock.Image(it) }
+    if (paragraphs.isEmpty()) return tables.map { ReaderBlock.Table(it) } + images
+    val blocks = ArrayList<ReaderBlock>(paragraphs.size + images.size + tables.size)
+    val usedTables = BooleanArray(tables.size)
+    var nextImage = 0
     paragraphs.forEachIndexed { index, paragraph ->
-        blocks += ReaderBlock.Text(paragraph)
-        val targetCount = ((index + 1) * extras.size) / paragraphs.size
-        while (nextExtra < targetCount && nextExtra < extras.size) {
-            blocks += extras[nextExtra]
-            nextExtra++
+        val tableIndex = HtmlTables.markerIndex(paragraph)
+        if (tableIndex != null && tableIndex in tables.indices) {
+            blocks += ReaderBlock.Table(tables[tableIndex])
+            usedTables[tableIndex] = true
+        } else {
+            blocks += ReaderBlock.Text(paragraph)
+        }
+        if (images.isNotEmpty()) {
+            val targetCount = ((index + 1) * images.size) / paragraphs.size
+            while (nextImage < targetCount && nextImage < images.size) {
+                blocks += images[nextImage]
+                nextImage++
+            }
         }
     }
-    while (nextExtra < extras.size) {
-        blocks += extras[nextExtra]
-        nextExtra++
+    while (nextImage < images.size) {
+        blocks += images[nextImage]
+        nextImage++
+    }
+    // 兼容旧数据：没有占位符的表格放到文末。
+    tables.forEachIndexed { index, table ->
+        if (!usedTables[index]) blocks += ReaderBlock.Table(table)
     }
     return blocks
 }

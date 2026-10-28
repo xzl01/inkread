@@ -39,11 +39,21 @@ object HtmlToText {
 
     private val SKIP_CONTENT_TAGS = setOf("script", "style", "iframe", "noscript", "svg", "template", "canvas")
 
-    /** HTML → 段落纯文本（段落之间用 `\n\n`）。 */
-    fun toText(html: String?): String {
+    /**
+     * 有的 RSS 把整段 HTML 二次转义成 `&lt;p&gt;`；这里先解一层，
+     * 让表格/图片提取器也能看到真正的 `<table>/<img>` 标签。
+     */
+    fun normalizeSource(html: String?): String {
         if (html.isNullOrBlank()) return ""
         var source = html
         if (DOUBLE_ENCODED.containsMatchIn(source)) source = Entities.decode(source)
+        return source
+    }
+
+    /** HTML → 段落纯文本（段落之间用 `\n\n`）。 */
+    fun toText(html: String?): String {
+        if (html.isNullOrBlank()) return ""
+        val source = normalizeSource(html)
         return normalize(Entities.decode(TagStripper(source).run()))
     }
 

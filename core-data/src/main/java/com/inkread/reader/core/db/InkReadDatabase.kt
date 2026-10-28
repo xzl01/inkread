@@ -49,11 +49,20 @@ class InkReadDatabase private constructor(context: Context) : SQLiteOpenHelper(
         if (oldVersion < 4) {
             db.execSQL("ALTER TABLE articles ADD COLUMN tables_json TEXT NOT NULL DEFAULT '[]'")
         }
+        if (oldVersion < 6) {
+            // v6 起正文里保存表格位置占位符；清条件缓存强制重新解析一次旧文章。
+            db.execSQL("UPDATE feeds SET etag = NULL, last_modified = NULL")
+        }
+        if (oldVersion < 5) {
+            // 旧版本同步时把表格压成了正文；清掉条件请求缓存，强制重新拉一次订阅源，
+            // 让已有文章补上 tables_json 并重写干净的正文。
+            db.execSQL("UPDATE feeds SET etag = NULL, last_modified = NULL")
+        }
     }
 
     companion object {
         const val DB_NAME = "inkread.db"
-        const val DB_VERSION = 4
+        const val DB_VERSION = 6
 
         const val TABLE_FEEDS = "feeds"
         const val TABLE_ARTICLES = "articles"

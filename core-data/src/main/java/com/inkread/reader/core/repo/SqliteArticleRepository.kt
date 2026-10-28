@@ -10,6 +10,7 @@ import com.inkread.reader.core.model.StorageStats
 import com.inkread.reader.core.net.FetchException
 import com.inkread.reader.core.net.HttpFetcher
 import com.inkread.reader.core.parse.ArticleExtractor
+import com.inkread.reader.core.parse.HtmlTables
 import com.inkread.reader.core.parse.HtmlToText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -89,7 +90,7 @@ internal class SqliteArticleRepository(
         articleDao.updateFullContent(
             id = id,
             contentText = contentText,
-            previewText = HtmlToText.previewFromText(contentText),
+            previewText = HtmlToText.previewFromText(HtmlTables.stripMarkers(contentText)),
             imageUrls = extracted.imageUrls,
             tables = extracted.tables,
         )

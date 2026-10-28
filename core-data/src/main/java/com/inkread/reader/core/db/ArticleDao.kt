@@ -120,11 +120,14 @@ internal class ArticleDao(private val database: InkReadDatabase) {
                 if (article.tables.isEmpty()) continue
                 val values = ContentValues().apply {
                     put("tables_json", encodeTables(article.tables))
+                    put("content_text", article.contentText)
+                    put("preview_text", article.previewText)
                 }
+                // 表格文章重同步时，正文也要用去掉表格后的干净文本覆盖旧数据。
                 changed += db.update(
                     TABLE,
                     values,
-                    "feed_id = ? AND guid = ? AND (tables_json IS NULL OR tables_json = '[]')",
+                    "feed_id = ? AND guid = ?",
                     arrayOf(feedId.toString(), article.guid),
                 )
             }

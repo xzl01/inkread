@@ -24,6 +24,26 @@ class HtmlTablesTest {
     }
 
     @Test
+    fun decodesDoubleEncodedHtmlFromRss() {
+        val escaped = "&lt;p&gt;正文&lt;/p&gt;&lt;table&gt;&lt;tr&gt;&lt;th&gt;品种&lt;/th&gt;&lt;th&gt;价格&lt;/th&gt;&lt;/tr&gt;" +
+            "&lt;tr&gt;&lt;td&gt;黄金&lt;/td&gt;&lt;td&gt;4060&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;"
+        val tables = HtmlTables.extract(escaped)
+        assertEquals(1, tables.size)
+        assertEquals(listOf("品种", "价格"), tables[0].rows[0])
+        assertEquals(listOf("黄金", "4060"), tables[0].rows[1])
+    }
+
+    @Test
+    fun marksTablePositionInHtml() {
+        val html = "<p>前文</p><table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table><p>后文</p>"
+        val parsed = HtmlTables.parseAndMark(html)
+        assertEquals(1, parsed.tables.size)
+        assertTrue(parsed.markedHtml.contains("\u0001TABLE:0\u0001"))
+        val paragraphs = HtmlToText.toText(parsed.markedHtml).split(Regex("\\n\\s*\\n"))
+        assertEquals(listOf(0), paragraphs.mapNotNull { HtmlTables.markerIndex(it) })
+    }
+
+    @Test
     fun ignoresLayoutTablesAndRemovesTableHtml() {
         val html = "<div>正文</div><table><tr><td>一个单元格</td></tr></table>"
         assertEquals(0, HtmlTables.extract(html).size)

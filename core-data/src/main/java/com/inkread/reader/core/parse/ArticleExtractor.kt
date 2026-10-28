@@ -54,14 +54,16 @@ object ArticleExtractor {
         if (candidates.isEmpty()) candidates += cleanedPage
 
         for (candidate in candidates) {
+            val normalized = HtmlToText.normalizeSource(candidate)
+            val parsedTables = HtmlTables.parseAndMark(normalized)
             val text = HtmlToText.stripBoilerplate(
-                HtmlToText.toText(HtmlTables.removeTables(candidate)),
+                HtmlToText.toText(parsedTables.markedHtml),
             )
             if (text.length < MIN_TEXT_LENGTH) continue
             return Extracted(
                 text = text,
-                imageUrls = HtmlImages.extract(candidate, baseUrl),
-                tables = HtmlTables.extract(candidate),
+                imageUrls = HtmlImages.extract(normalized, baseUrl),
+                tables = parsedTables.tables,
             )
         }
         return null

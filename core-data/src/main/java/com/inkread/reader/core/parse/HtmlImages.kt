@@ -21,8 +21,9 @@ object HtmlImages {
 
     fun extract(html: String?, baseUrl: String?, limit: Int = DEFAULT_LIMIT): List<String> {
         if (html.isNullOrBlank() || limit <= 0) return emptyList()
+        val source = HtmlToText.normalizeSource(html)
         val result = LinkedHashSet<String>()
-        for (tag in IMG_TAG.findAll(html)) {
+        for (tag in IMG_TAG.findAll(source)) {
             if (result.size >= limit) break
             val attrs = parseAttrs(tag.value)
             val width = attrs["width"]?.toIntOrNull() ?: 0
