@@ -6,8 +6,10 @@ import android.database.sqlite.SQLiteDatabase
 import com.inkread.reader.core.model.AdjacentArticles
 import com.inkread.reader.core.model.Article
 import com.inkread.reader.core.model.ArticleFilter
+import com.inkread.reader.core.model.ArticleTable
 import com.inkread.reader.core.model.ArticleWithFeed
 import com.inkread.reader.core.parse.HtmlToText
+import org.json.JSONArray
 
 /**
  * `articles` 表的数据访问对象。
@@ -64,6 +66,7 @@ internal class ArticleDao(private val database: InkReadDatabase) {
                     put("is_starred", if (article.isStarred) 1 else 0)
                     put("image_urls", article.imageUrls.joinToString("\n"))
                     put("is_partial", if (article.isPartial) 1 else 0)
+                    put("tables_json", encodeTables(article.tables))
                 }
                 val rowId = db.insertWithOnConflict(TABLE, null, values, SQLiteDatabase.CONFLICT_IGNORE)
                 if (rowId != -1L) inserted++
@@ -107,6 +110,32 @@ internal class ArticleDao(private val database: InkReadDatabase) {
         return changed
     }
 
+    /** 为已存在的文章补写表格（旧版本升级后重新同步时回填）。 */
+    fun updateTables(feedId: Long, articles: List<Article>): Int {
+        if (articles.isEmpty()) return 0
+        var changed = 0
+        db.beginTransaction()
+        try {
+            for (article in articles) {
+                if (article.tables.isEmpty()) continue
+                val values = ContentValues().apply {
+                    put("tables_json", encodeTables(article.tables))
+                }
+                changed += db.update(
+                    TABLE,
+                    values,
+                    "feed_id = ? AND guid = ? AND (tables_json IS NULL OR tables_json = '[]')",
+                    arrayOf(feedId.toString(), article.guid),
+                )
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        if (changed > 0) database.revision.bump()
+        return changed
+    }
+
     /** 为已存在的文章补写图片地址（旧版本升级后重新同步时回填）。 */
     fun updateImageUrls(feedId: Long, articles: List<Article>): Int {
         if (articles.isEmpty()) return 0
@@ -140,12 +169,14 @@ internal class ArticleDao(private val database: InkReadDatabase) {
         contentText: String,
         previewText: String,
         imageUrls: List<String>,
+        tables: List<ArticleTable> = emptyList(),
     ): Boolean {
         val values = ContentValues().apply {
             put("content_text", contentText)
             put("preview_text", previewText)
             put("image_urls", imageUrls.joinToString("\n"))
             put("is_partial", 0)
+            put("tables_json", encodeTables(tables))
         }
         val rows = db.update(TABLE, values, "id = ?", arrayOf(id.toString()))
         if (rows > 0) database.revision.bump()
@@ -278,6 +309,7 @@ internal class ArticleDao(private val database: InkReadDatabase) {
                 ?.toList()
                 ?: emptyList(),
             isPartial = getInt(getColumnIndexOrThrow("is_partial")) != 0,
+            tables = decodeTables(getString(getColumnIndexOrThrow("tables_json"))),
         )
         val feedCustomTitle = getString(getColumnIndexOrThrow("feed_custom_title"))
         val feedTitle = getString(getColumnIndexOrThrow("feed_title")) ?: ""
@@ -288,12 +320,44 @@ internal class ArticleDao(private val database: InkReadDatabase) {
         )
     }
 
+    private fun encodeTables(tables: List<ArticleTable>): String {
+        val array = JSONArray()
+        tables.forEach { table ->
+            val obj = org.json.JSONObject()
+            obj.put("hasHeader", table.hasHeader)
+            val rows = JSONArray()
+            table.rows.forEach { row -> rows.put(JSONArray(row)) }
+            obj.put("rows", rows)
+            array.put(obj)
+        }
+        return array.toString()
+    }
+
+    private fun decodeTables(raw: String?): List<ArticleTable> {
+        if (raw.isNullOrBlank()) return emptyList()
+        return runCatching {
+            val array = JSONArray(raw)
+            (0 until array.length()).mapNotNull { index ->
+                val obj = array.optJSONObject(index) ?: return@mapNotNull null
+                val rowsArray = obj.optJSONArray("rows") ?: return@mapNotNull null
+                val rows = (0 until rowsArray.length()).map { rowIndex ->
+                    val rowArray = rowsArray.optJSONArray(rowIndex) ?: JSONArray()
+                    (0 until rowArray.length()).map { rowArray.optString(it, "") }
+                }.filter { it.isNotEmpty() }
+                if (rows.isEmpty()) null else ArticleTable(
+                    rows = rows,
+                    hasHeader = obj.optBoolean("hasHeader", false),
+                )
+            }
+        }.getOrDefault(emptyList())
+    }
+
     private companion object {
         const val TABLE = InkReadDatabase.TABLE_ARTICLES
 
         const val SQL_SELECT = "SELECT a.id, a.feed_id, a.guid, a.url, a.title, a.author, " +
             "a.published_at, a.fetched_at, a.content_text, a.preview_text, a.is_read, a.is_starred, " +
-            "a.image_urls, a.is_partial, " +
+            "a.image_urls, a.is_partial, a.tables_json, " +
             "f.title AS feed_title, f.custom_title AS feed_custom_title, f.site_url AS feed_site_url " +
             "FROM articles a INNER JOIN feeds f ON f.id = a.feed_id"
     }

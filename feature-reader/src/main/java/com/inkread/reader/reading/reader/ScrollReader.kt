@@ -3,6 +3,7 @@ package com.inkread.reader.reading.reader
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
+import com.inkread.reader.core.model.ArticleTable
 import com.inkread.reader.core.model.ArticleWithFeed
 import com.inkread.reader.core.prefs.ImageEnhancement
 import com.inkread.reader.core.prefs.ReaderSettings
@@ -47,6 +50,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 private sealed interface ReaderBlock {
     data class Text(val value: String) : ReaderBlock
     data class Image(val url: String) : ReaderBlock
+    data class Table(val table: ArticleTable) : ReaderBlock
 }
 
 /**
@@ -63,6 +67,7 @@ internal fun ScrollReader(
     notice: String?,
     onPercentChange: (Int) -> Unit,
     imageUrls: List<String> = emptyList(),
+    tables: List<ArticleTable> = emptyList(),
     listState: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier,
 ) {
@@ -70,7 +75,7 @@ internal fun ScrollReader(
     val readingStyle = rememberReadingStyle(settings)
     val titleStyle = rememberReadingTitleStyle(settings)
     val latestPercentCallback by rememberUpdatedState(onPercentChange)
-    val blocks = remember(bodyText, imageUrls) { buildBlocks(bodyText, imageUrls) }
+    val blocks = remember(bodyText, imageUrls, tables) { buildBlocks(bodyText, imageUrls, tables) }
 
     LaunchedEffect(listState) {
         snapshotFlow {
@@ -141,6 +146,12 @@ internal fun ScrollReader(
                             .fillMaxWidth()
                             .padding(vertical = 8.dp),
                     )
+                    is ReaderBlock.Table -> ArticleTableView(
+                        table = block.table,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                    )
                 }
             }
         }
@@ -153,32 +164,60 @@ internal fun ScrollReader(
  * 我们没有保存图片在原文中的精确位置（RSS/网页结构差异大），
  * 这里按段落比例分配，阅读时图片会出现在相关段落之间而不是全部堆在文末。
  */
-private fun buildBlocks(bodyText: String, imageUrls: List<String>): List<ReaderBlock> {
+private fun buildBlocks(
+    bodyText: String,
+    imageUrls: List<String>,
+    tables: List<ArticleTable>,
+): List<ReaderBlock> {
     val paragraphs = bodyText
         .split(Regex("""\n\s*\n"""))
         .map { it.trim() }
         .filter { it.isNotEmpty() }
-    if (paragraphs.isEmpty()) {
-        return imageUrls.map { ReaderBlock.Image(it) }
-    }
-    if (imageUrls.isEmpty()) {
-        return paragraphs.map { ReaderBlock.Text(it) }
-    }
-    val blocks = ArrayList<ReaderBlock>(paragraphs.size + imageUrls.size)
-    var nextImage = 0
+    val extras = tables.map { ReaderBlock.Table(it) } + imageUrls.map { ReaderBlock.Image(it) }
+    if (paragraphs.isEmpty()) return extras
+    if (extras.isEmpty()) return paragraphs.map { ReaderBlock.Text(it) }
+    val blocks = ArrayList<ReaderBlock>(paragraphs.size + extras.size)
+    var nextExtra = 0
     paragraphs.forEachIndexed { index, paragraph ->
         blocks += ReaderBlock.Text(paragraph)
-        val targetCount = ((index + 1) * imageUrls.size) / paragraphs.size
-        while (nextImage < targetCount && nextImage < imageUrls.size) {
-            blocks += ReaderBlock.Image(imageUrls[nextImage])
-            nextImage++
+        val targetCount = ((index + 1) * extras.size) / paragraphs.size
+        while (nextExtra < targetCount && nextExtra < extras.size) {
+            blocks += extras[nextExtra]
+            nextExtra++
         }
     }
-    while (nextImage < imageUrls.size) {
-        blocks += ReaderBlock.Image(imageUrls[nextImage])
-        nextImage++
+    while (nextExtra < extras.size) {
+        blocks += extras[nextExtra]
+        nextExtra++
     }
     return blocks
+}
+
+/** 正文内表格：等宽列 + 1dp 细线，表头加粗；不用 Material DataTable。 */
+@Composable
+private fun ArticleTableView(table: ArticleTable, modifier: Modifier = Modifier) {
+    val columnCount = table.rows.maxOfOrNull { it.size }?.coerceAtLeast(1) ?: 1
+    Column(modifier = modifier.border(1.dp, InkColor.rule)) {
+        table.rows.forEachIndexed { rowIndex, row ->
+            Row(modifier = Modifier.fillMaxWidth()) {
+                for (column in 0 until columnCount) {
+                    val text = row.getOrNull(column).orEmpty()
+                    Text(
+                        text = text,
+                        style = if (table.hasHeader && rowIndex == 0) {
+                            InkType.body.copy(fontWeight = FontWeight.SemiBold)
+                        } else {
+                            InkType.body
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .border(1.dp, InkColor.ruleLight)
+                            .padding(horizontal = 6.dp, vertical = 6.dp),
+                    )
+                }
+            }
+        }
+    }
 }
 
 /** 正文内嵌图片：按屏幕尺寸采样解码，加载失败显示静态提示。 */

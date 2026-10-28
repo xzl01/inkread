@@ -54,6 +54,14 @@ data class Article(
     val imageUrls: List<String> = emptyList(),
     /** RSS 只给了摘要（带「查看全文」钩子等），可通过「获取全文」重新抓取原网页。 */
     val isPartial: Boolean = false,
+    /** 正文中的表格（同步/获取全文时从 HTML 提取，阅读页以网格形式渲染）。 */
+    val tables: List<ArticleTable> = emptyList(),
+)
+
+/** 文章里的一个表格（行 × 列；表格较小时在阅读页直接渲染）。 */
+data class ArticleTable(
+    val rows: List<List<String>>,
+    val hasHeader: Boolean = false,
 )
 
 /** 文章 + 所属订阅源信息（列表/阅读页展示用）。 */

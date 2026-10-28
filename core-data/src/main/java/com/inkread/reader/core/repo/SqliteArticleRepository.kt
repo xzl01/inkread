@@ -91,6 +91,7 @@ internal class SqliteArticleRepository(
             contentText = contentText,
             previewText = HtmlToText.previewFromText(contentText),
             imageUrls = extracted.imageUrls,
+            tables = extracted.tables,
         )
         FullTextResult.Success(contentText.length)
     }

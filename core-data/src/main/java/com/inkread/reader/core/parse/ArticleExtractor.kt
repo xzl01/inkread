@@ -1,5 +1,7 @@
 package com.inkread.reader.core.parse
 
+import com.inkread.reader.core.model.ArticleTable
+
 /**
  * 从文章原网页中提取正文（纯 Kotlin，无 jsoup / Android 依赖，可 JVM 单测）。
  *
@@ -29,6 +31,7 @@ object ArticleExtractor {
     data class Extracted(
         val text: String,
         val imageUrls: List<String>,
+        val tables: List<ArticleTable> = emptyList(),
     )
 
     fun extract(html: String?, baseUrl: String?): Extracted? {
@@ -51,11 +54,14 @@ object ArticleExtractor {
         if (candidates.isEmpty()) candidates += cleanedPage
 
         for (candidate in candidates) {
-            val text = HtmlToText.stripBoilerplate(HtmlToText.toText(candidate))
+            val text = HtmlToText.stripBoilerplate(
+                HtmlToText.toText(HtmlTables.removeTables(candidate)),
+            )
             if (text.length < MIN_TEXT_LENGTH) continue
             return Extracted(
                 text = text,
                 imageUrls = HtmlImages.extract(candidate, baseUrl),
+                tables = HtmlTables.extract(candidate),
             )
         }
         return null

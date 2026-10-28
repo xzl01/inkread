@@ -100,12 +100,19 @@ fun ReaderScreen(
             (current.article.isPartial || current.article.contentText.length < 2_000)
     } == true
     val imageUrls = article?.article?.imageUrls.orEmpty()
-    val hasInlineImages = imageUrls.isNotEmpty() && bodyText.isNotBlank()
+    val tables = article?.article?.tables.orEmpty()
+    val hasRichContent = bodyText.isNotBlank() && (imageUrls.isNotEmpty() || tables.isNotEmpty())
     val forceScroll = bodyText.length > PaginationEngine.MAX_PAGED_CHARS
     val useScroll = settings.readingMode == ReadingMode.SCROLL || pagedState.degraded ||
-        forceScroll || hasInlineImages
+        forceScroll || hasRichContent
     val scrollNotice = when {
-        hasInlineImages -> "本文含 ${imageUrls.size} 张图片，已使用图文滚动模式"
+        hasRichContent -> buildString {
+            append("本文含 ")
+            if (imageUrls.isNotEmpty()) append("${imageUrls.size} 张图片")
+            if (imageUrls.isNotEmpty() && tables.isNotEmpty()) append("、")
+            if (tables.isNotEmpty()) append("${tables.size} 个表格")
+            append("，已使用图文/表格滚动模式")
+        }
         pagedState.degraded -> pagedState.degradedReason ?: "排版失败，已切换为滚动模式"
         forceScroll -> "文章过长，已切换为滚动模式"
         else -> null
@@ -280,6 +287,7 @@ fun ReaderScreen(
                         notice = scrollNotice,
                         onPercentChange = { percent -> scrollPercent = percent },
                         imageUrls = imageUrls,
+                        tables = tables,
                         listState = richListState,
                     )
                 }
