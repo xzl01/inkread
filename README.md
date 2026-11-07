@@ -40,6 +40,10 @@
 |---|---|
 | ![图片增强](docs/screenshots/image-enhancement.png) | ![表格渲染](docs/screenshots/reader-table.png) |
 
+| 正文图片原位（图片紧跟原段落） |
+|---|
+| ![图片原位](docs/screenshots/reader-image-positions.png) |
+
 ## 为什么单独做一个 RSS 阅读器
 
 通用 RSS App 在墨水屏上体验普遍很差：
