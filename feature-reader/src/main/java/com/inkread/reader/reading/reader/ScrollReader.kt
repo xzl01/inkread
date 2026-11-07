@@ -34,6 +34,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import com.inkread.reader.core.model.ArticleTable
@@ -241,11 +242,21 @@ private fun ArticleTableView(
     modifier: Modifier = Modifier,
 ) {
     val columnCount = table.rows.maxOfOrNull { it.size }?.coerceAtLeast(1) ?: 1
+    // 表格用比正文更紧凑的排版，接近网页表格；正文 20sp 时表格约 16sp。
+    val tableStyle = remember(readingStyle) {
+        val base = readingStyle.fontSize.value
+        val size = (base - 4f - (columnCount - 4).coerceAtLeast(0) * 0.7f)
+            .coerceIn(13f, 18f)
+        readingStyle.copy(
+            fontSize = size.sp,
+            lineHeight = (size * 1.45f).sp,
+        )
+    }
     // 按每列内容的长度分配宽度，避免「型号」和「备注」一样宽、长文本列被挤成窄条。
     val columnWeights = remember(table.rows, columnCount) {
         (0 until columnCount).map { column ->
             val longest = table.rows.maxOfOrNull { it.getOrNull(column)?.length ?: 0 } ?: 0
-            longest.coerceIn(4, 28).toFloat()
+            longest.coerceIn(7, 26).toFloat()
         }
     }
     Column(modifier = modifier.border(1.dp, InkColor.rule)) {
@@ -256,14 +267,14 @@ private fun ArticleTableView(
                     Text(
                         text = text,
                         style = if (table.hasHeader && rowIndex == 0) {
-                            readingStyle.copy(fontWeight = FontWeight.SemiBold)
+                            tableStyle.copy(fontWeight = FontWeight.SemiBold)
                         } else {
-                            readingStyle
+                            tableStyle
                         },
                         modifier = Modifier
                             .weight(columnWeights[column])
                             .border(1.dp, InkColor.ruleLight)
-                            .padding(horizontal = 6.dp, vertical = 6.dp),
+                            .padding(horizontal = 5.dp, vertical = 4.dp),
                     )
                 }
             }
