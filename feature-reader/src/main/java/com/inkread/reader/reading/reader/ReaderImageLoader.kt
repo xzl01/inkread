@@ -7,6 +7,7 @@ import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
+import android.util.LruCache
 import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
@@ -26,6 +27,13 @@ import kotlinx.coroutines.withContext
 internal object ReaderImageLoader {
 
     private const val MAX_BYTES = 20L * 1024 * 1024
+    private const val CACHE_MAX_BYTES = 200L * 1024 * 1024
+    private const val CACHE_MAX_AGE_MS = 30L * 24 * 60 * 60 * 1000
+
+    /** 增强后的 Bitmap 缓存（约 12MB），重复进入看图/滚动时不用重复做 ColorMatrix。 */
+    private val enhancedCache = object : LruCache<String, Bitmap>(12 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount / 1024
+    }
 
     suspend fun load(
         context: Context,
@@ -38,9 +46,12 @@ internal object ReaderImageLoader {
         if (url.isBlank()) return@withContext null
         val dir = File(context.cacheDir, "article-images").apply { mkdirs() }
         val cacheFile = File(dir, sha1(url) + ".img")
+        val cacheKey = "${cacheFile.name}:${maxWidth}x${maxHeight}:${enhancement.name}"
+        enhancedCache.get(cacheKey)?.let { return@withContext it }
         if (!cacheFile.exists() || cacheFile.length() == 0L) {
             try {
                 download(url, referer, cacheFile)
+                pruneCache(dir)
             } catch (t: Throwable) {
                 cacheFile.delete()
                 return@withContext null
@@ -51,7 +62,9 @@ internal object ReaderImageLoader {
             cacheFile.delete()
             return@withContext null
         }
-        applyEnhancement(bitmap, enhancement)
+        val enhanced = applyEnhancement(bitmap, enhancement)
+        if (enhanced !== bitmap) enhancedCache.put(cacheKey, enhanced)
+        enhanced
     }
 
     private data class ImageStats(
@@ -165,6 +178,30 @@ internal object ReaderImageLoader {
             stdLuma = kotlin.math.sqrt(variance.coerceAtLeast(0f)),
             avgChroma = (sumChroma / count).toFloat(),
         )
+    }
+
+    /** 控制配图缓存体积：删除 30 天未访问的文件，超过 200MB 时按最久未用淘汰到 80%。 */
+    private fun pruneCache(dir: File) {
+        val files = dir.listFiles() ?: return
+        val now = System.currentTimeMillis()
+        var total = 0L
+        files.forEach { file ->
+            if (!file.isFile) return@forEach
+            if (now - file.lastModified() > CACHE_MAX_AGE_MS) {
+                file.delete()
+            } else {
+                total += file.length()
+            }
+        }
+        if (total <= CACHE_MAX_BYTES) return
+        val target = CACHE_MAX_BYTES * 8 / 10
+        files.filter { it.isFile }
+            .sortedBy { it.lastModified() }
+            .forEach { file ->
+                if (total <= target) return@forEach
+                total -= file.length()
+                file.delete()
+            }
     }
 
     private fun download(url: String, referer: String?, target: File) {

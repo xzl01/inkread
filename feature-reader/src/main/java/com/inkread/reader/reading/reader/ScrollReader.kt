@@ -34,9 +34,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import com.inkread.reader.core.model.ArticleTable
 import com.inkread.reader.core.model.ArticleWithFeed
+import com.inkread.reader.core.parse.HtmlImages
 import com.inkread.reader.core.parse.HtmlTables
 import com.inkread.reader.core.prefs.ImageEnhancement
 import com.inkread.reader.core.prefs.ReaderSettings
@@ -149,6 +151,7 @@ internal fun ScrollReader(
                     )
                     is ReaderBlock.Table -> ArticleTableView(
                         table = block.table,
+                        readingStyle = readingStyle,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 8.dp),
@@ -160,10 +163,10 @@ internal fun ScrollReader(
 }
 
 /**
- * 把纯文本段落与图片均匀混排。
+ * 把纯文本段落、图片和表格还原成原文顺序。
  *
- * 我们没有保存图片在原文中的精确位置（RSS/网页结构差异大），
- * 这里按段落比例分配，阅读时图片会出现在相关段落之间而不是全部堆在文末。
+ * 新正文里用 `\u0001IMAGE:n\u0001` / `\u0001TABLE:n\u0001` 占位；旧文章没有
+ * 图片占位符时退回按段落比例分配。
  */
 private fun buildBlocks(
     bodyText: String,
@@ -178,26 +181,50 @@ private fun buildBlocks(
     if (paragraphs.isEmpty()) return tables.map { ReaderBlock.Table(it) } + images
     val blocks = ArrayList<ReaderBlock>(paragraphs.size + images.size + tables.size)
     val usedTables = BooleanArray(tables.size)
-    var nextImage = 0
+    val usedImages = BooleanArray(images.size)
+    val hasImageMarkers = paragraphs.any { HtmlImages.markerIndex(it) != null }
+    var nextLegacyImage = 0
     paragraphs.forEachIndexed { index, paragraph ->
         val tableIndex = HtmlTables.markerIndex(paragraph)
-        if (tableIndex != null && tableIndex in tables.indices) {
-            blocks += ReaderBlock.Table(tables[tableIndex])
-            usedTables[tableIndex] = true
-        } else {
-            blocks += ReaderBlock.Text(paragraph)
+        val imageIndex = HtmlImages.markerIndex(paragraph)
+        when {
+            tableIndex != null && tableIndex in tables.indices -> {
+                blocks += ReaderBlock.Table(tables[tableIndex])
+                usedTables[tableIndex] = true
+            }
+            imageIndex != null && imageIndex in images.indices -> {
+                blocks += images[imageIndex]
+                usedImages[imageIndex] = true
+            }
+            imageIndex != null || tableIndex != null -> {
+                // 占位符越界（旧版本数据不一致）：直接跳过，避免控制字符显示出来。
+            }
+            else -> blocks += ReaderBlock.Text(paragraph)
         }
-        if (images.isNotEmpty()) {
+        if (!hasImageMarkers && images.isNotEmpty()) {
             val targetCount = ((index + 1) * images.size) / paragraphs.size
-            while (nextImage < targetCount && nextImage < images.size) {
-                blocks += images[nextImage]
-                nextImage++
+            while (nextLegacyImage < targetCount && nextLegacyImage < images.size) {
+                if (!usedImages[nextLegacyImage]) {
+                    blocks += images[nextLegacyImage]
+                    usedImages[nextLegacyImage] = true
+                }
+                nextLegacyImage++
             }
         }
     }
-    while (nextImage < images.size) {
-        blocks += images[nextImage]
-        nextImage++
+    // 没有图片占位符的旧文章 / 占位符缺失的尾部图片，补在文末。
+    if (!hasImageMarkers) {
+        while (nextLegacyImage < images.size) {
+            if (!usedImages[nextLegacyImage]) {
+                blocks += images[nextLegacyImage]
+                usedImages[nextLegacyImage] = true
+            }
+            nextLegacyImage++
+        }
+    } else {
+        images.forEachIndexed { index, image ->
+            if (!usedImages[index]) blocks += image
+        }
     }
     // 兼容旧数据：没有占位符的表格放到文末。
     tables.forEachIndexed { index, table ->
@@ -208,8 +235,19 @@ private fun buildBlocks(
 
 /** 正文内表格：等宽列 + 1dp 细线，表头加粗；不用 Material DataTable。 */
 @Composable
-private fun ArticleTableView(table: ArticleTable, modifier: Modifier = Modifier) {
+private fun ArticleTableView(
+    table: ArticleTable,
+    readingStyle: TextStyle,
+    modifier: Modifier = Modifier,
+) {
     val columnCount = table.rows.maxOfOrNull { it.size }?.coerceAtLeast(1) ?: 1
+    // 按每列内容的长度分配宽度，避免「型号」和「备注」一样宽、长文本列被挤成窄条。
+    val columnWeights = remember(table.rows, columnCount) {
+        (0 until columnCount).map { column ->
+            val longest = table.rows.maxOfOrNull { it.getOrNull(column)?.length ?: 0 } ?: 0
+            longest.coerceIn(4, 28).toFloat()
+        }
+    }
     Column(modifier = modifier.border(1.dp, InkColor.rule)) {
         table.rows.forEachIndexed { rowIndex, row ->
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -218,12 +256,12 @@ private fun ArticleTableView(table: ArticleTable, modifier: Modifier = Modifier)
                     Text(
                         text = text,
                         style = if (table.hasHeader && rowIndex == 0) {
-                            InkType.body.copy(fontWeight = FontWeight.SemiBold)
+                            readingStyle.copy(fontWeight = FontWeight.SemiBold)
                         } else {
-                            InkType.body
+                            readingStyle
                         },
                         modifier = Modifier
-                            .weight(1f)
+                            .weight(columnWeights[column])
                             .border(1.dp, InkColor.ruleLight)
                             .padding(horizontal = 6.dp, vertical = 6.dp),
                     )

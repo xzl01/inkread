@@ -16,8 +16,8 @@ android {
         applicationId = "com.inkread.reader"
         minSdk = 26
         targetSdk = 34
-        versionCode = 15
-        versionName = "0.9.1"
+        versionCode = 17
+        versionName = "0.10.0"
 
         vectorDrawables.useSupportLibrary = true
     }

@@ -47,6 +47,26 @@ class HtmlImagesTest {
     }
 
     @Test
+    fun marksImagePositionsInHtml() {
+        val html = """
+            <p>前文</p>
+            <img src="https://img.example.com/a.jpg" />
+            <p>中段</p>
+            <img src="https://img.example.com/b.jpg" />
+            <p>后文</p>
+        """.trimIndent()
+        val parsed = HtmlImages.parseAndMark(html, null)
+        assertEquals(
+            listOf("https://img.example.com/a.jpg", "https://img.example.com/b.jpg"),
+            parsed.imageUrls,
+        )
+        val text = HtmlToText.toText(parsed.markedHtml)
+        val paragraphs = text.split(Regex("\\n\\s*\\n"))
+        assertEquals(listOf(0, 1), paragraphs.mapNotNull { HtmlImages.markerIndex(it) })
+        assertTrue(HtmlImages.stripMarkers(text).contains("前文"))
+    }
+
+    @Test
     fun respectsLimitAndSkipsNonHttp() {
         val html = (1..10).joinToString("\n") { "<img src=\"https://x.example/$it.jpg\">" } +
             "\n<img src=\"data:image/png;base64,abc\">"

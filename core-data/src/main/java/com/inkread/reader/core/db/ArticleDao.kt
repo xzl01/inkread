@@ -150,11 +150,14 @@ internal class ArticleDao(private val database: InkReadDatabase) {
                 val values = ContentValues().apply {
                     put("image_urls", article.imageUrls.joinToString("\n"))
                     put("is_partial", if (article.isPartial) 1 else 0)
+                    put("content_text", article.contentText)
+                    put("preview_text", article.previewText)
                 }
+                // 图片文章重同步时同时重写正文，补上图片位置占位符。
                 changed += db.update(
                     TABLE,
                     values,
-                    "feed_id = ? AND guid = ? AND (image_urls IS NULL OR image_urls = '')",
+                    "feed_id = ? AND guid = ?",
                     arrayOf(feedId.toString(), article.guid),
                 )
             }

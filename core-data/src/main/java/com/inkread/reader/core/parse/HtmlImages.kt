@@ -11,6 +11,10 @@ object HtmlImages {
 
     const val DEFAULT_LIMIT = 20
 
+    private const val MARKER_PREFIX = "\u0001IMAGE:"
+    private const val MARKER_SUFFIX = "\u0001"
+    private val MARKER_RE = Regex("""\u0001IMAGE:(\d+)\u0001""")
+
     private val IMG_TAG = Regex("""(?is)<img\b[^>]*>""")
     private val CHROME_URL = Regex(
         """(?:avatar|/logo|logo\.|icon|qrcode|qr-code|placeholder|emoji|badge|sprite)""",
@@ -19,39 +23,85 @@ object HtmlImages {
         """(?is)([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))""",
     )
 
-    fun extract(html: String?, baseUrl: String?, limit: Int = DEFAULT_LIMIT): List<String> {
-        if (html.isNullOrBlank() || limit <= 0) return emptyList()
+    fun extract(html: String?, baseUrl: String?, limit: Int = DEFAULT_LIMIT): List<String> =
+        parseAndMark(html, baseUrl, limit).imageUrls
+
+    /** 解析结果：图片 URL 列表 + 用 `\u0001IMAGE:n\u0001` 替换 img 后的 HTML。 */
+    data class Parsed(
+        val imageUrls: List<String>,
+        val markedHtml: String,
+    )
+
+    /**
+     * 提取图片，并在 HTML 中用占位符保留图片位置；正文生成后阅读页可按原位插入。
+     * 装饰图/图标/过小图片直接移除，不产生占位符。
+     */
+    fun parseAndMark(
+        html: String?,
+        baseUrl: String?,
+        limit: Int = DEFAULT_LIMIT,
+    ): Parsed {
+        if (html.isNullOrBlank()) return Parsed(emptyList(), "")
         val source = HtmlToText.normalizeSource(html)
-        val result = LinkedHashSet<String>()
+        val urls = ArrayList<String>()
+        val indexByUrl = HashMap<String, Int>()
+        val builder = StringBuilder(source.length)
+        var lastEnd = 0
         for (tag in IMG_TAG.findAll(source)) {
-            if (result.size >= limit) break
-            val attrs = parseAttrs(tag.value)
-            val width = attrs["width"]?.toIntOrNull() ?: 0
-            val height = attrs["height"]?.toIntOrNull() ?: 0
-            if (width in 1..2 || height in 1..2) continue
-            val raw = listOfNotNull(
-                attrs["data-original"],
-                attrs["data-src"],
-                attrs["data-lazy-src"],
-                attrs["src"],
-                firstSrcsetUrl(attrs["srcset"]),
-            ).map { it.trim() }
-                .firstOrNull { it.isNotEmpty() && !it.startsWith("data:", ignoreCase = true) }
-                ?.let { Entities.decode(it) }
-                ?: continue
-            val resolved = UrlResolver.resolve(baseUrl, raw.trim()) ?: continue
-            if (!resolved.startsWith("http://", ignoreCase = true) &&
-                !resolved.startsWith("https://", ignoreCase = true)
-            ) {
-                continue
+            builder.append(source, lastEnd, tag.range.first)
+            lastEnd = tag.range.last + 1
+            val resolved = resolveImage(tag.value, baseUrl) ?: continue
+            val existing = indexByUrl[resolved]
+            if (existing != null) {
+                builder.append("\n\n").append(marker(existing)).append("\n\n")
+            } else if (urls.size < limit) {
+                val index = urls.size
+                urls += resolved
+                indexByUrl[resolved] = index
+                builder.append("\n\n").append(marker(index)).append("\n\n")
             }
-            if (resolved.substringBefore('?').endsWith(".svg", ignoreCase = true)) continue
-            // 头像 / logo / 二维码 / 占位图等页面装饰，不是正文配图
-            val lower = resolved.lowercase()
-            if (CHROME_URL.containsMatchIn(lower)) continue
-            result.add(resolved)
         }
-        return result.toList()
+        builder.append(source, lastEnd, source.length)
+        return Parsed(imageUrls = urls, markedHtml = builder.toString())
+    }
+
+    /** 若段落正好是图片占位符，返回图片下标。 */
+    fun markerIndex(paragraph: String): Int? =
+        MARKER_RE.matchEntire(paragraph.trim())?.groupValues?.getOrNull(1)?.toIntOrNull()
+
+    fun stripMarkers(text: String?): String {
+        if (text.isNullOrBlank()) return ""
+        return MARKER_RE.replace(text, "")
+    }
+
+    private fun marker(index: Int): String = "$MARKER_PREFIX$index$MARKER_SUFFIX"
+
+    private fun resolveImage(tag: String, baseUrl: String?): String? {
+        val attrs = parseAttrs(tag)
+        val width = attrs["width"]?.toIntOrNull() ?: 0
+        val height = attrs["height"]?.toIntOrNull() ?: 0
+        if (width in 1..2 || height in 1..2) return null
+        val raw = listOfNotNull(
+            attrs["data-original"],
+            attrs["data-src"],
+            attrs["data-lazy-src"],
+            attrs["src"],
+            firstSrcsetUrl(attrs["srcset"]),
+        ).map { it.trim() }
+            .firstOrNull { it.isNotEmpty() && !it.startsWith("data:", ignoreCase = true) }
+            ?.let { Entities.decode(it) }
+            ?: return null
+        val resolved = UrlResolver.resolve(baseUrl, raw.trim()) ?: return null
+        if (!resolved.startsWith("http://", ignoreCase = true) &&
+            !resolved.startsWith("https://", ignoreCase = true)
+        ) {
+            return null
+        }
+        if (resolved.substringBefore('?').endsWith(".svg", ignoreCase = true)) return null
+        // 头像 / logo / 二维码 / 占位图等页面装饰，不是正文配图
+        val lower = resolved.lowercase()
+        if (CHROME_URL.containsMatchIn(lower)) return null
+        return resolved
     }
 
     private fun parseAttrs(tag: String): Map<String, String> {

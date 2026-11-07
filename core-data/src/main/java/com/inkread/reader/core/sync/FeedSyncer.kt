@@ -93,14 +93,15 @@ internal class FeedSyncer(
             val html = HtmlToText.normalizeSource(parsedArticle.contentHtml)
             val parsedTables = HtmlTables.parseAndMark(html)
             val tables = parsedTables.tables
-            val rawText = HtmlToText.toText(parsedTables.markedHtml)
+            val parsedImages = HtmlImages.parseAndMark(
+                html = parsedTables.markedHtml,
+                baseUrl = parsedArticle.url ?: feed.siteUrl,
+            )
+            val rawText = HtmlToText.toText(parsedImages.markedHtml)
             val cleanedText = HtmlToText.stripBoilerplate(rawText)
             val isPartial = cleanedText != rawText.trim()
             val contentText = cleanedText.take(MAX_CONTENT_CHARS)
-            val imageUrls = HtmlImages.extract(
-                html = html,
-                baseUrl = parsedArticle.url ?: feed.siteUrl,
-            )
+            val imageUrls = parsedImages.imageUrls
             Article(
                 feedId = feed.id,
                 guid = parsedArticle.guid,
@@ -110,7 +111,9 @@ internal class FeedSyncer(
                 publishedAt = parsedArticle.publishedAt ?: now,
                 fetchedAt = now,
                 contentText = contentText,
-                previewText = HtmlToText.previewFromText(HtmlTables.stripMarkers(contentText)),
+                previewText = HtmlToText.previewFromText(
+                    HtmlImages.stripMarkers(HtmlTables.stripMarkers(contentText)),
+                ),
                 imageUrls = imageUrls,
                 isPartial = isPartial,
                 tables = tables,
